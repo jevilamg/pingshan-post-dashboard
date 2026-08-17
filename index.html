@@ -881,11 +881,11 @@ Object.entries(detailData).forEach(([col, info]) => {
   const indName = info.name;
   let maxS = info.max_score;
   let maxDisplay;
-  if (info.max_display) { maxDisplay = info.max_display; }
-  else if (indicatorBaseBonus[indName]) {
+  if (indicatorBaseBonus[indName]) {
     const bb = indicatorBaseBonus[indName];
     maxDisplay = `${bb.base}+${bb.bonus}=${(bb.base+bb.bonus).toFixed(1)}`;
-  } else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
+  } else if (info.max_display) { maxDisplay = info.max_display; }
+  else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
   const v4 = info.data['4月']?.['坪山'] || 0;
   const v5 = info.data['5月']?.['坪山'] || 0;
   const v6 = info.data['6月']?.['坪山'] || 0;
@@ -1127,11 +1127,11 @@ Object.entries(detailData).forEach(([col, info]) => {
   const indName = info.name;
   let maxS = info.max_score;
   let maxDisplay;
-  if (info.max_display) { maxDisplay = info.max_display; }
-  else if (indicatorBaseBonus[indName]) {
+  if (indicatorBaseBonus[indName]) {
     const bb = indicatorBaseBonus[indName];
     maxDisplay = `${bb.base}+${bb.bonus}=${(bb.base+bb.bonus).toFixed(1)}`;
-  } else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
+  } else if (info.max_display) { maxDisplay = info.max_display; }
+  else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
   const scores = unitsWithPsFirst.map(u => ({ unit: u, score: info.data['7月']?.[u] || 0 }));
   const sorted = [...scores].sort((a, b) => b.score - a.score);
   const psRank = sorted.findIndex(s => s.unit === '坪山') + 1;
