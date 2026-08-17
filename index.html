@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>坪山邮政经营数据看板 · 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #005538 0%, #003322 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+        .header .subtitle { font-size: 14px; opacity: 0.9; }
+        .update-time { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-top: 8px; font-size: 12px; }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: white; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transition: transform 0.3s; border-top: 3px solid #006633; }
+        .kpi-card:hover { transform: translateY(-4px); }
+        .kpi-label { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .kpi-value { font-size: 28px; font-weight: 700; color: #006633; }
+        .kpi-unit { font-size: 14px; color: #999; margin-left: 2px; }
+        .kpi-change { font-size: 12px; margin-top: 6px; padding: 2px 8px; border-radius: 10px; display: inline-block; }
+        .kpi-change.up { background: #e6f7ed; color: #00a854; }
+        .kpi-change.down { background: #fff1f0; color: #f5222d; }
+        
+        .chart-section { background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .chart-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-left: 12px; border-left: 4px solid #006633; }
+        .chart-container { width: 100%; height: 350px; }
+        
+        .ranking-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ranking-table th { background: #f0f7f3; padding: 12px 8px; text-align: center; font-weight: 600; color: #555; border-bottom: 2px solid #c8e6d4; }
+        .ranking-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+        .ranking-table tr:hover { background: #f5faf7; }
+        .ranking-table .highlight { background: #e6f7ed; font-weight: 600; }
+        .ranking-table .highlight td { color: #006633; }
+        .rank-badge { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; font-size: 12px; font-weight: 600; }
+        .rank-1 { background: #ffd700; color: #333; }
+        .rank-2 { background: #c0c0c0; color: #333; }
+        .rank-3 { background: #cd7f32; color: white; }
+        .rank-other { background: #e8e8e8; color: #666; }
+        .progress-bar { display: inline-block; width: 80px; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+        
+        .tab-container { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab-btn { padding: 8px 16px; border: none; background: #f0f7f3; border-radius: 20px; cursor: pointer; font-size: 13px; color: #666; transition: all 0.3s; }
+        .tab-btn.active { background: #006633; color: white; }
+        
+        .yoy-badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+        .yoy-up { background: #e6f7ed; color: #006633; }
+        .yoy-down { background: #fff1f0; color: #cf1322; }
+        
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header h1 { font-size: 22px; }
+            .kpi-value { font-size: 22px; }
+            .chart-container { height: 280px; }
+            .ranking-table { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 坪山邮政经营数据看板</h1>
+            <div class="subtitle">深圳邮政坪山分局 · 2026年度经营监控（含2025年同比）</div>
+            <div class="update-time">数据更新：2026-08-17</div>
+        </div>
+        
+        <div class="kpi-grid" id="kpiGrid"></div>
+        
+        <!-- 同比收入对比 -->
+        <div class="chart-section">
+            <div class="chart-title">📊 月度收入同比（2025 vs 2026）</div>
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchYoy('monthly')">月度对比</button>
+                <button class="tab-btn" onclick="switchYoy('cumulative')">累计对比</button>
+                <button class="tab-btn" onclick="switchYoy('growth')">增幅走势</button>
+            </div>
+            <div id="yoyChart" class="chart-container"></div>
+        </div>
+        
+        <!-- 月度趋势 -->
+        <div class="chart-section">
+            <div class="chart-title">📈 2026年月度收入趋势</div>
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchTrend('revenue')">收入走势</button>
+                <button class="tab-btn" onclick="switchTrend('growth')">增幅对比</button>
+                <button class="tab-btn" onclick="switchTrend('progress')">进度对比</button>
+            </div>
+            <div id="trendChart" class="chart-container"></div>
+        </div>
+        
+        <!-- 专业结构 -->
+        <div class="chart-section">
+            <div class="chart-title">🎯 专业收入结构（2026年7月）</div>
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchProf('pie')">占比分布</button>
+                <button class="tab-btn" onclick="switchProf('bar')">专业对比</button>
+            </div>
+            <div id="profChart" class="chart-container"></div>
+        </div>
+        
+        <!-- 排名对比 -->
+        <div class="chart-section">
+            <div class="chart-title">🏆 分局排名对比（2026年7月累计）</div>
+            <div id="rankingChart" class="chart-container" style="height:400px;"></div>
+        </div>
+        
+        <!-- 排名明细表 -->
+        <div class="chart-section">
+            <div class="chart-title">📋 各分局经营明细（2026年7月）</div>
+            <div style="overflow-x:auto;">
+                <table class="ranking-table" id="rankingTable"></table>
+            </div>
+        </div>
+        
+        <!-- 2025全年回顾 -->
+        <div class="chart-section">
+            <div class="chart-title">📅 2025年全年月度收入回顾</div>
+            <div id="full2025Chart" class="chart-container"></div>
+        </div>
+    </div>
+
+<script>
+const DATA = {"update_time": "2026-08-17", "ps_2025": [{"month": "1月", "本月收入": 1318.61, "累计收入": 1318.61, "去年同期": 1533.82, "累计增幅": -14.03, "累计进度": null, "累计排名": null, "序时目标完成率": null, "盈缺": 1318.61}, {"month": "2月", "本月收入": 1283.88, "累计收入": 2602.49, "去年同期": 2485.85, "累计增幅": 4.69, "累计进度": null, "累计排名": null, "序时目标完成率": null, "盈缺": 2602.49}, {"month": "3月", "本月收入": 1412.34, "累计收入": 4014.84, "去年同期": 3719.9, "累计增幅": 7.93, "累计进度": 23.29, "累计排名": 9.0, "序时目标完成率": 93.16, "盈缺": -294.73}, {"month": "4月", "本月收入": 1281.99, "累计收入": 5296.83, "去年同期": 4818.15, "累计增幅": 9.93, "累计进度": 30.73, "累计排名": 9.0, "序时目标完成率": 92.18, "盈缺": -449.27}, {"month": "5月", "本月收入": 1116.46, "累计收入": 6413.29, "去年同期": 6288.61, "累计增幅": 1.98, "累计进度": 37.2, "累计排名": 9.0, "序时目标完成率": 89.29, "盈缺": -769.33}, {"month": "6月", "本月收入": 842.39, "累计收入": 7255.68, "去年同期": 7824.46, "累计增幅": -7.27, "累计进度": 43.95, "累计排名": 8.0, "序时目标完成率": 87.89, "盈缺": -999.38}, {"month": "7月", "本月收入": 1303.16, "累计收入": 8558.84, "去年同期": 9055.87, "累计增幅": -5.49, "累计进度": 51.84, "累计排名": 7.0, "序时目标完成率": 88.87, "盈缺": -1072.05}, {"month": "8月", "本月收入": 1944.3, "累计收入": 10503.14, "去年同期": 10316.08, "累计增幅": 1.81, "累计进度": 63.62, "累计排名": 3.0, "序时目标完成率": 95.42, "盈缺": -503.6}, {"month": "9月", "本月收入": 1702.29, "累计收入": 12205.43, "去年同期": 11440.85, "累计增幅": 6.68, "累计进度": 73.93, "累计排名": 3.0, "序时目标完成率": 98.57, "盈缺": -177.16}, {"month": "10月", "本月收入": 1703.5, "累计收入": 13908.93, "去年同期": 12950.66, "累计增幅": 7.4, "累计进度": 84.24, "累计排名": 3.0, "序时目标完成率": 101.09, "盈缺": 150.5}, {"month": "11月", "本月收入": 1494.95, "累计收入": 15403.89, "去年同期": 14398.71, "累计增幅": 6.98, "累计进度": 93.3, "累计排名": 3.0, "序时目标完成率": 101.78, "盈缺": 269.62}, {"month": "12月", "本月收入": 1284.3, "累计收入": 16683.84, "去年同期": 15714.48, "累计增幅": 6.17, "累计进度": 101.05, "累计排名": 3.0, "序时目标完成率": 110.24, "盈缺": 1549.57}], "ps_2026": [{"month": "1月", "本月收入": 1981.77, "累计收入": 1981.77, "去年同期": 1329.98, "累计增幅": 49.01, "累计进度": 10.83, "累计排名": 3.0, "序时目标完成率": 129.95, "盈缺": 456.71}, {"month": "2月", "本月收入": 1576.93, "累计收入": 3558.72, "去年同期": 2625.46, "累计增幅": 35.55, "累计进度": 19.45, "累计排名": 2.0, "序时目标完成率": 116.67, "盈缺": 508.6}, {"month": "3月", "本月收入": 1756.15, "累计收入": 5314.87, "去年同期": 4046.43, "累计增幅": 31.35, "累计进度": 29.04, "累计排名": 4.0, "序时目标完成率": 116.17, "盈缺": 739.68}, {"month": "4月", "本月收入": 1428.99, "累计收入": 6743.86, "去年同期": 4984.28, "累计增幅": 35.3, "累计进度": 36.85, "累计排名": 5.0, "序时目标完成率": 110.55, "盈缺": 643.61}, {"month": "5月", "本月收入": 1725.92, "累计收入": 8648.37, "去年同期": 6105.92, "累计增幅": 41.64, "累计进度": 47.26, "累计排名": 4.0, "序时目标完成率": 113.42, "盈缺": 1023.06}, {"month": "6月", "本月收入": 1593.52, "累计收入": 10270.69, "去年同期": 7306.27, "累计增幅": 40.57, "累计进度": 56.12, "累计排名": 3.0, "序时目标完成率": 112.24, "盈缺": 1120.32}, {"month": "7月", "本月收入": 1601.46, "累计收入": 11903.09, "去年同期": 8613.12, "累计增幅": 38.2, "累计进度": 65.04, "累计排名": 3.0, "序时目标完成率": 111.5, "盈缺": 1227.66}], "sq_2025": [{"month": "1月", "全市本月": 18960.29, "全市累计": 18960.29, "全市增幅": -25.66, "全市进度": null}, {"month": "2月", "全市本月": 19984.01, "全市累计": 38944.31, "全市增幅": -2.89, "全市进度": null}, {"month": "3月", "全市本月": 21465.25, "全市累计": 60378.76, "全市增幅": -0.37, "全市进度": 24.46}, {"month": "4月", "全市本月": 16737.97, "全市累计": 77116.73, "全市增幅": -0.53, "全市进度": 31.24}, {"month": "5月", "全市本月": 14934.8, "全市累计": 92051.53, "全市增幅": -5.21, "全市进度": 37.29}, {"month": "6月", "全市本月": 10970.03, "全市累计": 102991.05, "全市增幅": -12.17, "全市进度": 43.93}, {"month": "7月", "全市本月": 16945.74, "全市累计": 119936.79, "全市增幅": -10.45, "全市进度": 51.16}, {"month": "8月", "全市本月": 25749.52, "全市累计": 152954.85, "全市增幅": -1.94, "全市进度": 53.65}, {"month": "9月", "全市本月": 19744.72, "全市累计": 159841.05, "全市增幅": -4.9, "全市进度": 68.18}, {"month": "10月", "全市本月": 18993.87, "全市累计": 178834.92, "全市增幅": -4.4, "全市进度": 76.29}, {"month": "11月", "全市本月": 18875.5, "全市累计": 197710.41, "全市增幅": -3.93, "全市进度": 84.34}, {"month": "12月", "全市本月": 16525.53, "全市累计": 214235.94, "全市增幅": -3.52, "全市进度": 91.39}], "sq_2026": [{"month": "1月", "全市本月": 28709.27, "全市累计": 28709.27, "全市增幅": 19.31, "全市进度": 9.32}, {"month": "2月", "全市本月": 21366.88, "全市累计": 50043.13, "全市增幅": -3.99, "全市进度": 16.25}, {"month": "3月", "全市本月": 30992.85, "全市累计": 81035.98, "全市增幅": -3.56, "全市进度": 26.32}, {"month": "4月", "全市本月": 25046.07, "全市累计": 107511.7, "全市增幅": 6.24, "全市进度": 34.91}, {"month": "5月", "全市本月": 24943.25, "全市累计": 132771.38, "全市增幅": 10.75, "全市进度": 43.12}, {"month": "6月", "全市本月": 24265.54, "全市累计": 157358.12, "全市增幅": 13.56, "全市进度": 51.1}, {"month": "7月", "全市本月": 22946.57, "全市累计": 180672.76, "全市增幅": 12.54, "全市进度": 58.67}], "pingshan_prof": [{"month": "1月", "单位\n专业": {}, "总收入": {"本月": 1981.77, "累计": 1945.77, "进度": 10.63, "预算": 18300.74}, "（一）非寄递": {"本月": 968.75, "累计": 968.75, "进度": 9.7, "预算": 9989.12}, "1.代理金融": {"本月": 900.45, "累计": 900.45, "进度": 10.08, "预算": 8933.66}, "2.邮务业务": {"本月": 59.8, "累计": 59.8, "进度": 10.0, "预算": 597.96}, "(1)函件": {"本月": 9.6, "累计": 9.6, "进度": null, "预算": 0}, "(2)集邮": {"本月": 34.77, "累计": 34.77, "进度": null, "预算": 0}, "(3)报刊": {"本月": 12.01, "累计": 12.01, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 3.43, "累计": 3.43, "进度": null, "预算": 0}, "3.电商业务": {"本月": 0, "累计": 0, "进度": 0.0, "预算": 300.27}, "(1)分销": {"本月": 0, "累计": 0, "进度": 0.0, "预算": 300.0}, "(2)中邮普惠": {"本月": 0, "累计": 0, "进度": 0.0, "预算": 0.27}, "4.租金": {"本月": 8.12, "累计": 8.12, "进度": 5.72, "预算": 142.0}, "5.其他": {"本月": 0.38, "累计": 0.38, "进度": 2.5, "预算": 15.1}, "（二）寄递": {"本月": 1013.03, "累计": 977.03, "进度": 11.75, "预算": 8311.61}, "1.国内特快": {"本月": 364.75, "累计": 329.48, "进度": 13.07, "预算": 2520.0}, "2.快递包裹": {"本月": 607.69, "累计": 607.55, "进度": 11.43, "预算": 5316.03}, "3.国际业务": {"本月": 37.6, "累计": 37.38, "进度": 7.91, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 0, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 2.98, "累计": 2.63, "进度": 87.63, "预算": 3.0}}, {"month": "2月", "单位\n专业": {}, "总收入": {"本月": 1576.93, "累计": 3511.6, "进度": 19.19, "预算": 18300.74}, "（一）非寄递": {"本月": 845.96, "累计": 1814.69, "进度": 18.17, "预算": 9989.12}, "1.代理金融": {"本月": 814.96, "累计": 1715.41, "进度": 19.2, "预算": 8933.66}, "2.邮务业务": {"本月": 20.26, "累计": 80.05, "进度": 13.39, "预算": 597.96}, "(1)函件": {"本月": 2.88, "累计": 12.46, "进度": null, "预算": 0}, "(2)集邮": {"本月": 3.74, "累计": 38.5, "进度": null, "预算": 0}, "(3)报刊": {"本月": 11.34, "累计": 23.35, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 2.3, "累计": 5.73, "进度": null, "预算": 0}, "3.电商业务": {"本月": 1.92, "累计": 1.92, "进度": 0.64, "预算": 300.27}, "(1)分销": {"本月": 1.92, "累计": 1.92, "进度": 0.64, "预算": 300.0}, "(2)中邮普惠": {"本月": 0, "累计": 0, "进度": 0.0, "预算": 0.27}, "4.租金": {"本月": 8.57, "累计": 16.68, "进度": 11.75, "预算": 142.0}, "5.其他": {"本月": 0.25, "累计": 0.63, "进度": 4.15, "预算": 15.1}, "（二）寄递": {"本月": 730.97, "累计": 1696.9, "进度": 20.42, "预算": 8311.61}, "1.国内特快": {"本月": 170.75, "累计": 491.62, "进度": 19.51, "预算": 2520.0}, "2.快递包裹": {"本月": 507.89, "累计": 1113.53, "进度": 20.95, "预算": 5316.03}, "3.国际业务": {"本月": 50.23, "累计": 87.54, "进度": 18.52, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 0, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 2.11, "累计": 4.22, "进度": 140.6, "预算": 3.0}}, {"month": "3月", "单位\n专业": {}, "总收入": {"本月": 1756.15, "累计": 5278.99, "进度": 28.85, "预算": 18300.74}, "（一）非寄递": {"本月": 776.57, "累计": 2591.04, "进度": 25.94, "预算": 9989.12}, "1.代理金融": {"本月": 680.69, "累计": 2396.1, "进度": 26.82, "预算": 8933.66}, "2.邮务业务": {"本月": 87.15, "累计": 166.99, "进度": 27.93, "预算": 597.96}, "(1)函件": {"本月": 1.21, "累计": 13.46, "进度": null, "预算": 0}, "(2)集邮": {"本月": 41.26, "累计": 79.76, "进度": null, "预算": 0}, "(3)报刊": {"本月": 42.46, "累计": 65.81, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 2.23, "累计": 7.96, "进度": null, "预算": 0}, "3.电商业务": {"本月": 0.01, "累计": 1.93, "进度": 0.64, "预算": 300.27}, "(1)分销": {"本月": 0, "累计": 1.92, "进度": 0.64, "预算": 300.0}, "(2)中邮普惠": {"本月": 0.01, "累计": 0.01, "进度": 2.34, "预算": 0.27}, "4.租金": {"本月": 8.49, "累计": 25.18, "进度": 17.73, "预算": 142.0}, "5.其他": {"本月": 0.2, "累计": 0.83, "进度": 5.5, "预算": 15.1}, "（二）寄递": {"本月": 979.58, "累计": 2687.95, "进度": 32.34, "预算": 8311.61}, "1.国内特快": {"本月": 350.65, "累计": 852.81, "进度": 33.84, "预算": 2520.0}, "2.快递包裹": {"本月": 488.64, "累计": 1604.02, "进度": 30.17, "预算": 5316.03}, "3.国际业务": {"本月": 104.95, "累计": 192.06, "进度": 40.64, "预算": 472.58}, "4.物流业务": {"本月": 33.82, "累计": 33.82, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 1.52, "累计": 5.24, "进度": 174.78, "预算": 3.0}}, {"month": "4月", "单位\n专业": {}, "总收入": {"本月": 1428.99, "累计": 6716.91, "进度": 36.7, "预算": 18300.74}, "（一）非寄递": {"本月": 658.33, "累计": 3249.6, "进度": 32.53, "预算": 9989.12}, "1.代理金融": {"本月": 594.49, "累计": 2990.59, "进度": 33.48, "预算": 8933.66}, "2.邮务业务": {"本月": 30.49, "累计": 197.71, "进度": 33.06, "预算": 597.96}, "(1)函件": {"本月": 0.82, "累计": 14.51, "进度": null, "预算": 0}, "(2)集邮": {"本月": 3.75, "累计": 83.51, "进度": null, "预算": 0}, "(3)报刊": {"本月": 24.11, "累计": 89.92, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 1.81, "累计": 9.77, "进度": null, "预算": 0}, "3.电商业务": {"本月": 24.91, "累计": 26.84, "进度": 8.94, "预算": 300.27}, "(1)分销": {"本月": 24.88, "累计": 26.8, "进度": 8.93, "预算": 300.0}, "(2)中邮普惠": {"本月": 0.03, "累计": 0.04, "进度": 13.45, "预算": 0.27}, "4.租金": {"本月": 8.49, "累计": 33.67, "进度": 23.71, "预算": 142.0}, "5.其他": {"本月": -0.06, "累计": 0.77, "进度": 5.12, "预算": 15.1}, "（二）寄递": {"本月": 770.66, "累计": 3467.31, "进度": 41.72, "预算": 8311.61}, "1.国内特快": {"本月": 340.16, "累计": 1203.64, "进度": 47.76, "预算": 2520.0}, "2.快递包裹": {"本月": 339.75, "累计": 1943.73, "进度": 36.56, "预算": 5316.03}, "3.国际业务": {"本月": 89.76, "累计": 280.91, "进度": 59.44, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 33.82, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 0.99, "累计": 5.21, "进度": 173.64, "预算": 3.0}}, {"month": "5月", "单位\n专业": {}, "总收入": {"本月": 1725.92, "累计": 8621.66, "进度": 47.11, "预算": 18300.74}, "（一）非寄递": {"本月": 912.53, "累计": 4340.72, "进度": 43.45, "预算": 9989.12}, "1.代理金融": {"本月": 878.57, "累计": 4047.75, "进度": 45.31, "预算": 8933.66}, "2.邮务业务": {"本月": 22.48, "累计": 220.19, "进度": 36.82, "预算": 597.96}, "(1)函件": {"本月": 1.82, "累计": 16.33, "进度": null, "预算": 0}, "(2)集邮": {"本月": 0.7, "累计": 84.21, "进度": null, "预算": 0}, "(3)报刊": {"本月": 18.26, "累计": 108.18, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 1.7, "累计": 11.46, "进度": null, "预算": 0}, "3.电商业务": {"本月": 2.82, "累计": 29.65, "进度": 9.88, "预算": 300.27}, "(1)分销": {"本月": 2.79, "累计": 29.59, "进度": 9.86, "预算": 300.0}, "(2)中邮普惠": {"本月": 0.03, "累计": 0.07, "进度": 25.28, "预算": 0.27}, "4.租金": {"本月": 8.49, "累计": 42.16, "进度": 29.69, "预算": 142.0}, "5.其他": {"本月": 0.16, "累计": 0.93, "进度": 6.17, "预算": 15.1}, "（二）寄递": {"本月": 813.39, "累计": 4280.94, "进度": 51.51, "预算": 8311.61}, "1.国内特快": {"本月": 381.1, "累计": 1585.76, "进度": 62.93, "预算": 2520.0}, "2.快递包裹": {"本月": 374.19, "累计": 2318.07, "进度": 43.61, "预算": 5316.03}, "3.国际业务": {"本月": 31.13, "累计": 311.74, "进度": 65.97, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 33.82, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 26.97, "累计": 31.56, "进度": 1051.84, "预算": 3.0}}, {"month": "6月", "单位\n专业": {}, "总收入": {"本月": 1593.52, "累计": 10247.11, "进度": 55.99, "预算": 18300.74}, "（一）非寄递": {"本月": 763.15, "累计": 5132.67, "进度": 51.38, "预算": 9989.12}, "1.代理金融": {"本月": 711.9, "累计": 4788.45, "进度": 53.6, "预算": 8933.66}, "2.邮务业务": {"本月": 35.22, "累计": 255.41, "进度": 42.71, "预算": 597.96}, "(1)函件": {"本月": 0.66, "累计": 17.0, "进度": null, "预算": 0}, "(2)集邮": {"本月": 3.95, "累计": 88.16, "进度": null, "预算": 0}, "(3)报刊": {"本月": 28.93, "累计": 137.12, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 1.67, "累计": 13.14, "进度": null, "预算": 0}, "3.电商业务": {"本月": 7.36, "累计": 37.01, "进度": 12.33, "预算": 300.27}, "(1)分销": {"本月": 7.34, "累计": 36.93, "进度": 12.31, "预算": 300.0}, "(2)中邮普惠": {"本月": 0.02, "累计": 0.09, "进度": 32.05, "预算": 0.27}, "4.租金": {"本月": 8.49, "累计": 50.65, "进度": 35.67, "预算": 142.0}, "5.其他": {"本月": 0.17, "累计": 1.1, "进度": 7.3, "预算": 15.1}, "（二）寄递": {"本月": 830.37, "累计": 5114.43, "进度": 61.53, "预算": 8311.61}, "1.国内特快": {"本月": 375.71, "累计": 1965.04, "进度": 77.98, "预算": 2520.0}, "2.快递包裹": {"本月": 413.04, "累计": 2731.16, "进度": 51.38, "预算": 5316.03}, "3.国际业务": {"本月": 33.94, "累计": 345.67, "进度": 73.14, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 33.82, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 7.68, "累计": 38.75, "进度": 1291.68, "预算": 3.0}}, {"month": "7月", "单位\n专业": {}, "总收入": {"本月": 1601.46, "累计": 11857.29, "进度": 64.79, "预算": 18300.74}, "（一）非寄递": {"本月": 815.25, "累计": 5978.86, "进度": 59.85, "预算": 9989.12}, "1.代理金融": {"本月": 764.21, "累计": 5583.6, "进度": 62.5, "预算": 8933.66}, "2.邮务业务": {"本月": 30.94, "累计": 286.36, "进度": 47.89, "预算": 597.96}, "(1)函件": {"本月": 1.01, "累计": 18.01, "进度": null, "预算": 0}, "(2)集邮": {"本月": 1.12, "累计": 89.28, "进度": null, "预算": 0}, "(3)报刊": {"本月": 27.29, "累计": 164.4, "进度": null, "预算": 0}, "(4)国内普包": {"本月": 1.52, "累计": 14.66, "进度": null, "预算": 0}, "3.电商业务": {"本月": 11.45, "累计": 48.46, "进度": 16.14, "预算": 300.27}, "(1)分销": {"本月": 11.45, "累计": 48.38, "进度": 16.13, "预算": 300.0}, "(2)中邮普惠": {"本月": 0, "累计": 0.09, "进度": 32.05, "预算": 0.27}, "4.租金": {"本月": 8.49, "累计": 59.15, "进度": 41.65, "预算": 142.0}, "5.其他": {"本月": 0.14, "累计": 1.25, "进度": 8.25, "预算": 15.1}, "（二）寄递": {"本月": 786.22, "累计": 5878.43, "进度": 70.73, "预算": 8311.61}, "1.国内特快": {"本月": 298.19, "累计": 2242.94, "进度": 89.01, "预算": 2520.0}, "2.快递包裹": {"本月": 459.97, "累计": 3191.11, "进度": 60.03, "预算": 5316.03}, "3.国际业务": {"本月": 21.25, "累计": 365.95, "进度": 77.44, "预算": 472.58}, "4.物流业务": {"本月": 0, "累计": 33.82, "进度": null, "预算": 0}, "5.寄递其他": {"本月": 6.81, "累计": 44.62, "进度": 1487.39, "预算": 3.0}}], "latest_2026_units": [{"name": "龙岗", "本月收入": 2997.32, "累计收入": 22501.72, "去年同期": 13675.07, "累计增幅": 64.55, "序时目标完成率": 113.04, "盈缺": 2596.29, "年预算": 34123.59, "累计进度": 65.94, "累计排名": 1.0}, {"name": "政务中心", "本月收入": 1057.07, "累计收入": 8570.37, "去年同期": 9294.81, "累计增幅": -7.79, "序时目标完成率": 111.62, "盈缺": 892.53, "年预算": 13162.0, "累计进度": 65.11, "累计排名": 2.0}, {"name": "坪山", "本月收入": 1601.46, "累计收入": 11903.09, "去年同期": 8613.12, "累计增幅": 38.2, "序时目标完成率": 111.5, "盈缺": 1227.66, "年预算": 18300.74, "累计进度": 65.04, "累计排名": 3.0}, {"name": "市计财", "本月收入": 1354.35, "累计收入": 7051.06, "去年同期": 6811.98, "累计增幅": 3.51, "序时目标完成率": 63.96, "盈缺": 620.4, "年预算": 11024.0, "累计进度": 63.96, "累计排名": null}, {"name": "深汕", "本月收入": 130.08, "累计收入": 1044.98, "去年同期": 964.61, "累计增幅": 8.33, "序时目标完成率": 106.14, "盈缺": 60.49, "年预算": 1687.69, "累计进度": 61.92, "累计排名": 4.0}, {"name": "前海", "本月收入": 773.14, "累计收入": 5393.32, "去年同期": 4844.7, "累计增幅": 11.32, "序时目标完成率": 105.43, "盈缺": 277.84, "年预算": 8769.39, "累计进度": 61.5, "累计排名": 5.0}, {"name": "龙华", "本月收入": 2999.86, "累计收入": 23847.99, "去年同期": 18478.72, "累计增幅": 29.06, "序时目标完成率": 105.02, "盈缺": 1139.7, "年预算": 38928.51, "累计进度": 61.26, "累计排名": 6.0}, {"name": "南山", "本月收入": 1418.69, "累计收入": 10251.22, "去年同期": 8512.57, "累计增幅": 20.42, "序时目标完成率": 104.05, "盈缺": 399.43, "年预算": 16888.77, "累计进度": 60.7, "累计排名": 7.0}, {"name": "商企中心", "本月收入": 54.3, "累计收入": 488.11, "去年同期": 184.27, "累计增幅": 164.89, "序时目标完成率": 102.92, "盈缺": 13.86, "年预算": 813.0, "累计进度": 60.04, "累计排名": 8.0}, {"name": "物流公司", "本月收入": 1070.15, "累计收入": 15988.83, "去年同期": 15055.83, "累计增幅": 6.2, "序时目标完成率": 102.87, "盈缺": 445.91, "年预算": 26645.0, "累计进度": 60.01, "累计排名": 9.0}, {"name": "宝安", "本月收入": 3057.57, "累计收入": 21312.45, "去年同期": 18608.21, "累计增幅": 14.53, "序时目标完成率": 101.98, "盈缺": 412.87, "年预算": 35827.86, "累计进度": 59.49, "累计排名": 10.0}, {"name": "罗湖", "本月收入": 1077.54, "累计收入": 8612.48, "去年同期": 7716.81, "累计增幅": 11.61, "序时目标完成率": 101.7, "盈缺": 143.61, "年预算": 14518.07, "累计进度": 59.32, "累计排名": 11.0}, {"name": "福田", "本月收入": 1554.49, "累计收入": 12219.42, "去年同期": 10227.83, "累计增幅": 19.47, "序时目标完成率": 99.43, "盈缺": -70.61, "年预算": 21068.61, "累计进度": 58.0, "累计排名": 12.0}, {"name": "邮务部", "本月收入": 144.99, "累计收入": 1175.65, "去年同期": 1755.28, "累计增幅": -33.02, "序时目标完成率": 85.08, "盈缺": -206.1, "年预算": 2368.71, "累计进度": 49.63, "累计排名": 13.0}, {"name": "国际公司", "本月收入": 4023.89, "累计收入": 31285.76, "去年同期": 37009.88, "累计增幅": -15.47, "序时目标完成率": 84.06, "盈缺": -5931.49, "年预算": 63801.0, "累计进度": 49.04, "累计排名": 14.0}, {"name": "金融部", "本月收入": 0, "累计收入": 0, "去年同期": 0, "累计增幅": null, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "寄递（其他）", "本月收入": 1.63, "累计收入": 8.43, "去年同期": 7.12, "累计增幅": 18.5, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "调整", "本月收入": -369.96, "累计收入": -982.11, "去年同期": -1219.83, "累计增幅": -19.49, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "寄递调整", "本月收入": 0, "累计收入": 0, "去年同期": 0, "累计增幅": null, "序时目标完成率": null, "盈缺": 0, "年预算": 0.58, "累计进度": null, "累计排名": null}], "latest_2025_units": [{"name": "全市总计", "本月收入": 16525.53, "累计收入": 214235.94, "去年同期": 222041.02, "累计增幅": -3.52, "序时目标完成率": 99.7, "盈缺": -651.92, "年预算": 234423.12, "累计进度": 91.39, "累计排名": null}, {"name": "罗湖", "本月收入": 1087.13, "累计收入": 13276.07, "去年同期": 14791.69, "累计增幅": -10.25, "序时目标完成率": 92.57, "盈缺": -1065.18, "年预算": 15645.0, "累计进度": 84.86, "累计排名": 10.0}, {"name": "福田", "本月收入": 1265.25, "累计收入": 17643.24, "去年同期": 18618.37, "累计增幅": -5.24, "序时目标完成率": 93.1, "盈缺": -1308.13, "年预算": 20674.23, "累计进度": 85.34, "累计排名": 9.0}, {"name": "南山", "本月收入": 1286.84, "累计收入": 15767.7, "去年同期": 14358.04, "累计增幅": 9.82, "序时目标完成率": 107.85, "盈缺": 1147.71, "年预算": 15949.08, "累计进度": 98.86, "累计排名": 4.0}, {"name": "前海", "本月收入": 593.86, "累计收入": 8547.13, "去年同期": 7209.87, "累计增幅": 18.55, "序时目标完成率": 113.8, "盈缺": 1036.74, "年预算": 8193.15, "累计进度": 104.32, "累计排名": 1.0}, {"name": "宝安", "本月收入": 2629.03, "累计收入": 30292.74, "去年同期": 30974.49, "累计增幅": -2.2, "序时目标完成率": 103.71, "盈缺": 1084.97, "年预算": 31863.02, "累计进度": 95.07, "累计排名": 6.0}, {"name": "龙华", "本月收入": 2564.88, "累计收入": 31985.39, "去年同期": 30452.94, "累计增幅": 5.03, "序时目标完成率": 105.95, "盈缺": 1795.96, "年预算": 32933.92, "累计进度": 97.12, "累计排名": 5.0}, {"name": "龙岗", "本月收入": 2472.86, "累计收入": 25437.5, "去年同期": 23092.18, "累计增幅": 10.16, "序时目标完成率": 100.53, "盈缺": 133.31, "年预算": 27604.58, "累计进度": 92.15, "累计排名": 8.0}, {"name": "坪山", "本月收入": 1284.3, "累计收入": 16683.84, "去年同期": 15714.48, "累计增幅": 6.17, "序时目标完成率": 110.24, "盈缺": 1549.57, "年预算": 16510.11, "累计进度": 101.05, "累计排名": 3.0}, {"name": "深汕", "本月收入": 108.34, "累计收入": 1621.32, "去年同期": 1460.59, "累计增幅": 11.0, "序时目标完成率": 113.06, "盈缺": 187.34, "年预算": 1564.34, "累计进度": 103.64, "累计排名": 2.0}, {"name": "邮务部", "本月收入": 126.19, "累计收入": 2515.63, "去年同期": 3481.73, "累计增幅": -27.75, "序时目标完成率": 74.69, "盈缺": -852.66, "年预算": 3674.5, "累计进度": 68.46, "累计排名": 12.0}, {"name": "金融", "本月收入": 0, "累计收入": 0, "去年同期": 0, "累计增幅": null, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "渠道部", "本月收入": 0, "累计收入": 0, "去年同期": 0, "累计增幅": null, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "寄递大客户中心", "本月收入": 1164.5, "累计收入": 16182.3, "去年同期": 15829.12, "累计增幅": 2.23, "序时目标完成率": 103.01, "盈缺": 472.92, "年预算": 17137.5, "累计进度": 94.43, "累计排名": 7.0}, {"name": "物流公司", "本月收入": 2281.87, "累计收入": 24940.68, "去年同期": 30698.24, "累计增幅": -18.76, "序时目标完成率": 91.19, "盈缺": -2410.36, "年预算": 29837.5, "累计进度": 83.59, "累计排名": 11.0}, {"name": "市计财", "本月收入": 329.59, "累计收入": 11223.18, "去年同期": 13833.77, "累计增幅": -18.87, "序时目标完成率": 87.43, "盈缺": 0, "年预算": 12836.2, "累计进度": 87.43, "累计排名": null}, {"name": "寄递（其他）", "本月收入": 1.2, "累计收入": 73.29, "去年同期": 1036.65, "累计增幅": -92.93, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "调整", "本月收入": -670.32, "累计收入": -1954.06, "去年同期": -416.96, "累计增幅": 368.64, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "寄递调整", "本月收入": 0, "累计收入": 0, "去年同期": 905.81, "累计增幅": -100.0, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "单位\n（含国际公司）", "本月收入": 0, "累计收入": 0, "去年同期": 0, "累计增幅": null, "序时目标完成率": null, "盈缺": 0, "年预算": 0, "累计进度": null, "累计排名": null}, {"name": "全市总计", "本月收入": 22248.86, "累计收入": 250035.53, "去年同期": 250908.66, "累计增幅": -0.35, "序时目标完成率": 87.7, "盈缺": -35071.12, "年预算": 285106.65, "累计进度": 87.7, "累计排名": null}, {"name": "国际公司", "本月收入": 5723.33, "累计收入": 35799.59, "去年同期": 28867.64, "累计增幅": 24.01, "序时目标完成率": 70.63, "盈缺": -14883.94, "年预算": 50683.54, "累计进度": 70.63, "累计排名": null}]};
+
+const GREEN = {
+    primary: "#006633",
+    light: "#2d8658",
+    pale: "#a8d8b9",
+    gradientStart: "#006633",
+    gradientEnd: "#2d8658",
+    barPie: ["#006633", "#2d8658", "#4CAF50", "#81C784", "#A5D6A7", "#C8E6C9", "#388E3D", "#1B5E20"]
+};
+
+function fmtWan(v) { return Math.round(v).toLocaleString(); }
+function fmtYi(v) { return (v / 10000).toFixed(2); }
+
+// ===== KPI Cards =====
+function renderKPI() {
+    const ps = DATA.ps_2026[DATA.ps_2026.length - 1];
+    const sq = DATA.sq_2026[DATA.sq_2026.length - 1];
+    
+    // Find 2025 July data for YoY
+    const ps25_jul = DATA.ps_2025[6]; // index 6 = July
+    const ps25_dec = DATA.ps_2025[11]; // December
+    
+    const monthVal = Math.round(ps["本月收入"]);
+    const cumVal = (ps["累计收入"] / 10000).toFixed(2);
+    
+    // YoY: compare 2026 July cumulative vs 2025 July cumulative
+    const yoy_cum = ps25_jul ? ((ps["累计收入"] - ps25_jul["累计收入"]) / ps25_jul["累计收入"] * 100).toFixed(1) : null;
+    
+    const kpis = [
+        { label: "本月收入", valueHtml: monthVal.toLocaleString() + '<span class="kpi-unit">万元</span>', change: null },
+        { label: "累计收入", valueHtml: cumVal + '<span class="kpi-unit">亿元</span>', change: ps["累计增幅"], suffix: "%", changeLabel: "同比增幅" },
+        { label: "年进度", valueHtml: ps["累计进度"].toFixed(2) + '<span class="kpi-unit">%</span>', change: ps["累计进度"] - sq["全市进度"], suffix: "pp" },
+        { label: "全市排名", valueHtml: ps["累计排名"] + '<span class="kpi-unit">名</span>', change: null },
+        { label: "序时完成率", valueHtml: ps["序时目标完成率"].toFixed(2) + '<span class="kpi-unit">%</span>', change: null },
+        { label: "2025全年", valueHtml: fmtYi(ps25_dec["累计收入"]) + '<span class="kpi-unit">亿元</span>', change: yoy_cum ? parseFloat(yoy_cum) : null, suffix: "% YoY", changeLabel: "同期对比" }
+    ];
+    
+    const grid = document.getElementById("kpiGrid");
+    grid.innerHTML = kpis.map(k => {
+        let changeHtml = "";
+        if (k.change !== null && k.change !== undefined) {
+            const cls = k.change >= 0 ? "up" : "down";
+            const sign = k.change >= 0 ? "+" : "";
+            const label = k.changeLabel || "vs全市";
+            changeHtml = `<div class="kpi-change ${cls}">${sign}${typeof k.change === 'number' ? k.change.toFixed(1) : k.change}${k.suffix || ""} ${label}</div>`;
+        }
+        return `
+            <div class="kpi-card">
+                <div class="kpi-label">${k.label}</div>
+                <div class="kpi-value">${k.valueHtml}</div>
+                ${changeHtml}
+            </div>
+        `;
+    }).join("");
+}
+
+// ===== YoY Comparison Chart =====
+let yoyChart = echarts.init(document.getElementById("yoyChart"));
+let currentYoy = "monthly";
+
+function renderYoyChart(type) {
+    currentYoy = type;
+    // Compare months 1-7 for both years
+    const months = DATA.ps_2025.slice(0, 7).map(m => m.month);
+    const ps25 = DATA.ps_2025.slice(0, 7);
+    const ps26 = DATA.ps_2026.slice(0, 7);
+    const sq25 = DATA.sq_2025.slice(0, 7);
+    const sq26 = DATA.sq_2026.slice(0, 7);
+    
+    let option;
+    if (type === "monthly") {
+        option = {
+            tooltip: { trigger: "axis", formatter: function(params) {
+                let s = params[0].axisValue + "<br/>";
+                params.forEach(p => { s += p.marker + p.seriesName + ": " + fmtWan(p.value) + "万元<br/>"; });
+                return s;
+            }},
+            legend: { data: ["2025坪山", "2026坪山", "2025全市", "2026全市"], top: 0 },
+            grid: { top: 50, bottom: 30, left: 55, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "万元" },
+            series: [
+                { name: "2025坪山", type: "bar", data: ps25.map(p => Math.round(p["本月收入"])), itemStyle: { color: "#a8d8b9", borderRadius: [4,4,0,0] } },
+                { name: "2026坪山", type: "bar", data: ps26.map(p => Math.round(p["本月收入"])), itemStyle: { color: GREEN.primary, borderRadius: [4,4,0,0] } },
+                { name: "2025全市", type: "line", data: sq25.map(m => Math.round(m["全市本月"])), itemStyle: { color: "#c8e6d4" }, lineStyle: { type: "dashed" } },
+                { name: "2026全市", type: "line", data: sq26.map(m => Math.round(m["全市本月"])), itemStyle: { color: "#f5222d" }, lineStyle: { type: "dashed" } }
+            ]
+        };
+    } else if (type === "cumulative") {
+        option = {
+            tooltip: { trigger: "axis", formatter: function(params) {
+                let s = params[0].axisValue + "<br/>";
+                params.forEach(p => { s += p.marker + p.seriesName + ": " + fmtYi(p.value) + "亿元<br/>"; });
+                return s;
+            }},
+            legend: { data: ["2025坪山", "2026坪山"], top: 0 },
+            grid: { top: 40, bottom: 30, left: 55, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "亿元", axisLabel: { formatter: v => (v/10000).toFixed(1) } },
+            series: [
+                { name: "2025坪山", type: "line", data: ps25.map(p => p["累计收入"]), itemStyle: { color: "#a8d8b9" }, areaStyle: { color: "rgba(168,216,185,0.3)" }, smooth: true },
+                { name: "2026坪山", type: "line", data: ps26.map(p => p["累计收入"]), itemStyle: { color: GREEN.primary }, areaStyle: { color: "rgba(0,102,51,0.15)" }, smooth: true }
+            ]
+        };
+    } else {
+        option = {
+            tooltip: { trigger: "axis", formatter: "{b}<br/>{a}: {c}%" },
+            legend: { data: ["2025坪山增幅", "2026坪山增幅", "2025全市增幅", "2026全市增幅"], top: 0 },
+            grid: { top: 50, bottom: 30, left: 50, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "%", axisLabel: { formatter: "{value}%" } },
+            series: [
+                { name: "2025坪山增幅", type: "line", data: ps25.map(p => p["累计增幅"]), itemStyle: { color: "#a8d8b9" }, smooth: true },
+                { name: "2026坪山增幅", type: "line", data: ps26.map(p => p["累计增幅"]), itemStyle: { color: GREEN.primary }, areaStyle: { color: "rgba(0,102,51,0.1)" }, smooth: true },
+                { name: "2025全市增幅", type: "line", data: sq25.map(m => m["全市增幅"]), itemStyle: { color: "#c8e6d4" }, lineStyle: { type: "dashed" }, smooth: true },
+                { name: "2026全市增幅", type: "line", data: sq26.map(m => m["全市增幅"]), itemStyle: { color: "#f5222d" }, lineStyle: { type: "dashed" }, smooth: true }
+            ]
+        };
+    }
+    yoyChart.setOption(option);
+}
+
+function switchYoy(type) {
+    document.querySelectorAll(".tab-container")[0].querySelectorAll(".tab-btn").forEach((btn, i) => {
+        btn.classList.toggle("active", (type === "monthly" && i === 0) || (type === "cumulative" && i === 1) || (type === "growth" && i === 2));
+    });
+    renderYoyChart(type);
+}
+
+// ===== 2026 Trend Chart =====
+let trendChart = echarts.init(document.getElementById("trendChart"));
+
+function renderTrendChart(type) {
+    const months = DATA.ps_2026.map(m => m.month);
+    const ps = DATA.ps_2026;
+    const sq = DATA.sq_2026;
+    
+    let option;
+    if (type === "revenue") {
+        option = {
+            tooltip: { trigger: "axis" },
+            legend: { data: ["坪山本月", "全市本月"], top: 0 },
+            grid: { top: 40, bottom: 30, left: 50, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "万元" },
+            series: [
+                { name: "坪山本月", type: "bar", data: ps.map(p => Math.round(p["本月收入"])), itemStyle: { color: GREEN.primary, borderRadius: [4,4,0,0] } },
+                { name: "全市本月", type: "line", data: sq.map(m => Math.round(m["全市本月"])), itemStyle: { color: "#f5222d" }, lineStyle: { width: 2 } }
+            ]
+        };
+    } else if (type === "growth") {
+        option = {
+            tooltip: { trigger: "axis", formatter: "{b}<br/>{a}: {c}%" },
+            legend: { data: ["坪山增幅", "全市增幅"], top: 0 },
+            grid: { top: 40, bottom: 30, left: 50, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "%", axisLabel: { formatter: "{value}%" } },
+            series: [
+                { name: "坪山增幅", type: "line", data: ps.map(p => p["累计增幅"]), itemStyle: { color: GREEN.primary }, areaStyle: { color: "rgba(0,102,51,0.1)" }, smooth: true },
+                { name: "全市增幅", type: "line", data: sq.map(m => m["全市增幅"]), itemStyle: { color: "#f5222d" }, smooth: true }
+            ]
+        };
+    } else {
+        option = {
+            tooltip: { trigger: "axis", formatter: "{b}<br/>{a}: {c}%" },
+            legend: { data: ["坪山进度", "全市进度", "序时进度"], top: 0 },
+            grid: { top: 40, bottom: 30, left: 50, right: 20 },
+            xAxis: { type: "category", data: months },
+            yAxis: { type: "value", name: "%", axisLabel: { formatter: "{value}%" } },
+            series: [
+                { name: "坪山进度", type: "line", data: ps.map(p => p["累计进度"]), itemStyle: { color: GREEN.primary }, areaStyle: { color: "rgba(0,102,51,0.1)" }, smooth: true },
+                { name: "全市进度", type: "line", data: sq.map(m => m["全市进度"]), itemStyle: { color: "#52c41a" }, smooth: true },
+                { name: "序时进度", type: "line", data: months.map((_, i) => ((i + 1) / 12 * 100).toFixed(1)), itemStyle: { color: "#faad14" }, lineStyle: { type: "dashed" } }
+            ]
+        };
+    }
+    trendChart.setOption(option);
+}
+
+function switchTrend(type) {
+    document.querySelectorAll(".tab-container")[1].querySelectorAll(".tab-btn").forEach((btn, i) => {
+        btn.classList.toggle("active", (type === "revenue" && i === 0) || (type === "growth" && i === 1) || (type === "progress" && i === 2));
+    });
+    renderTrendChart(type);
+}
+
+// ===== Professional Structure =====
+let profChart = echarts.init(document.getElementById("profChart"));
+
+function renderProfChart(type) {
+    const profData = DATA.pingshan_prof[DATA.pingshan_prof.length - 1];
+    const categories = [
+        { name: "代理金融", key: "1.代理金融" },
+        { name: "邮务业务", key: "2.邮务业务" },
+        { name: "电商业务", key: "3.电商业务" },
+        { name: "国内特快", key: "1.国内特快" },
+        { name: "快递包裹", key: "2.快递包裹" },
+        { name: "国际业务", key: "3.国际业务" }
+    ];
+    
+    let option;
+    if (type === "pie") {
+        const mainCats = [
+            { name: "代理金融", value: profData["1.代理金融"]?.["累计"] || 0 },
+            { name: "邮务业务", value: profData["2.邮务业务"]?.["累计"] || 0 },
+            { name: "电商业务", value: profData["3.电商业务"]?.["累计"] || 0 },
+            { name: "国内特快", value: profData["1.国内特快"]?.["累计"] || 0 },
+            { name: "快递包裹", value: profData["2.快递包裹"]?.["累计"] || 0 },
+            { name: "国际业务", value: profData["3.国际业务"]?.["累计"] || 0 }
+        ];
+        option = {
+            tooltip: { trigger: "item", formatter: "{b}: {c}万 ({d}%)" },
+            color: GREEN.barPie,
+            legend: { orient: "vertical", right: 10, top: "center" },
+            series: [{ type: "pie", radius: ["40%", "70%"], center: ["40%", "50%"], data: mainCats,
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.2)" } },
+                label: { formatter: "{b}\n{d}%" }
+            }]
+        };
+    } else {
+        const barData = categories.map(c => ({ name: c.name, value: profData[c.key]?.["累计"] || 0 }));
+        option = {
+            tooltip: { trigger: "axis" },
+            grid: { top: 20, bottom: 40, left: 80, right: 60 },
+            xAxis: { type: "value", name: "万元" },
+            yAxis: { type: "category", data: barData.map(d => d.name) },
+            series: [{ type: "bar", data: barData.map(d => Math.round(d.value)),
+                itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                    { offset: 0, color: GREEN.gradientStart }, { offset: 1, color: GREEN.gradientEnd }
+                ]), borderRadius: [0, 4, 4, 0] },
+                label: { show: true, position: "right", formatter: p => fmtWan(p.value) + "万" }
+            }]
+        };
+    }
+    profChart.setOption(option);
+}
+
+function switchProf(type) {
+    document.querySelectorAll(".tab-container")[2].querySelectorAll(".tab-btn").forEach((btn, i) => {
+        btn.classList.toggle("active", (type === "pie" && i === 0) || (type === "bar" && i === 1));
+    });
+    renderProfChart(type);
+}
+
+// ===== Ranking Chart =====
+let rankingChart = echarts.init(document.getElementById("rankingChart"));
+
+function renderRankingChart() {
+    const units = DATA.latest_2026_units.filter(u => u["累计进度"] !== null).slice(0, 15);
+    const option = {
+        tooltip: { trigger: "axis" },
+        grid: { top: 20, bottom: 40, left: 80, right: 40 },
+        xAxis: { type: "value", name: "累计进度%" },
+        yAxis: { type: "category", data: units.map(u => u.name).reverse(),
+            axisLabel: { formatter: v => v === "坪山" ? "{a|" + v + "}" : v, rich: { a: { color: GREEN.primary, fontWeight: "bold" } } }
+        },
+        series: [{ type: "bar",
+            data: units.map(u => ({ value: u["累计进度"], itemStyle: { color: u.name === "坪山" ? GREEN.primary : "#e0e0e0", borderRadius: [0, 4, 4, 0] } })).reverse(),
+            label: { show: true, position: "right", formatter: "{c}%" }
+        }]
+    };
+    rankingChart.setOption(option);
+}
+
+// ===== Ranking Table =====
+function renderRankingTable() {
+    const units = DATA.latest_2026_units.filter(u => u["累计进度"] !== null);
+    const table = document.getElementById("rankingTable");
+    let html = `<thead><tr>
+        <th>排名</th><th>单位</th><th>累计收入(亿元)</th><th>同比增幅</th><th>年进度</th><th>序时完成率</th><th>盈缺(万元)</th>
+    </tr></thead><tbody>`;
+    
+    units.forEach((u, i) => {
+        const rank = i + 1;
+        const rankCls = rank <= 3 ? `rank-${rank}` : "rank-other";
+        const rowCls = u.name === "坪山" ? "highlight" : "";
+        const progressColor = u["累计进度"] >= 60 ? "#006633" : u["累计进度"] >= 50 ? "#4CAF50" : "#f5222d";
+        const cumYi = (u["累计收入"] / 10000).toFixed(2);
+        
+        html += `<tr class="${rowCls}">
+            <td><span class="rank-badge ${rankCls}">${rank}</span></td>
+            <td>${u.name}</td>
+            <td>${cumYi}</td>
+            <td style="color:${u["累计增幅"] >= 0 ? '#006633' : '#f5222d'}">${u["累计增幅"] >= 0 ? '+' : ''}${u["累计增幅"]}%</td>
+            <td><span class="progress-bar"><span class="progress-fill" style="width:${u["累计进度"]}%;background:${progressColor}"></span></span> ${u["累计进度"]}%</td>
+            <td>${u["序时目标完成率"] || '-'}%</td>
+            <td style="color:${u["盈缺"] >= 0 ? '#006633' : '#f5222d'}">${u["盈缺"] >= 0 ? '+' : ''}${Math.round(u["盈缺"])}</td>
+        </tr>`;
+    });
+    html += "</tbody>";
+    table.innerHTML = html;
+}
+
+// ===== 2025 Full Year Review =====
+let full2025Chart = echarts.init(document.getElementById("full2025Chart"));
+
+function renderFull2025Chart() {
+    const months = DATA.ps_2025.map(m => m.month);
+    const ps = DATA.ps_2025;
+    
+    const option = {
+        tooltip: { trigger: "axis", formatter: function(params) {
+            let s = params[0].axisValue + "<br/>";
+            params.forEach(p => {
+                if (p.seriesName.includes("累计")) s += p.marker + p.seriesName + ": " + fmtYi(p.value) + "亿元<br/>";
+                else s += p.marker + p.seriesName + ": " + fmtWan(p.value) + "万元<br/>";
+            });
+            return s;
+        }},
+        legend: { data: ["月度收入", "累计收入"], top: 0 },
+        grid: { top: 40, bottom: 30, left: 55, right: 55 },
+        xAxis: { type: "category", data: months },
+        yAxis: [
+            { type: "value", name: "万元(月度)", position: "left" },
+            { type: "value", name: "亿元(累计)", position: "right", axisLabel: { formatter: v => (v/10000).toFixed(1) } }
+        ],
+        series: [
+            { name: "月度收入", type: "bar", data: ps.map(p => Math.round(p["本月收入"])), itemStyle: { color: GREEN.light, borderRadius: [4,4,0,0] } },
+            { name: "累计收入", type: "line", yAxisIndex: 1, data: ps.map(p => p["累计收入"]), itemStyle: { color: GREEN.primary }, smooth: true }
+        ]
+    };
+    full2025Chart.setOption(option);
+}
+
+// ===== Init =====
+renderKPI();
+renderYoyChart("monthly");
+renderTrendChart("revenue");
+renderProfChart("pie");
+renderRankingChart();
+renderRankingTable();
+renderFull2025Chart();
+
+window.addEventListener("resize", () => {
+    yoyChart.resize(); trendChart.resize(); profChart.resize();
+    rankingChart.resize(); full2025Chart.resize();
+});
+</script>
+</body>
+</html>
