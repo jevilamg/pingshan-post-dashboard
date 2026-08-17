@@ -1042,10 +1042,54 @@ function showDept(dept) {
   const latestData = monthsTrend['7月'] && monthsTrend['7月']['坪山'] ? monthsTrend['7月']['坪山'] : null;
   let totalMax = 0, totalScore = 0, topInds = [], weakInds = [];
 
+  // Build prefix map for parent-child dedup (avoid double-counting sub-indicators)
+  const _pfxMap = {};
+  keys.forEach(k => {
+    const ind = detailData[k];
+    if (!ind) return;
+    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
+    if (m) _pfxMap[m[1]] = { key: k, ms: ind.max_score || 0 };
+  });
+  // Detect non-numeric group parents (e.g. "代理金融跨年营销活动" with sub-items summing to its max)
+  const _noPfx = [];
+  keys.forEach(k => {
+    const ind = detailData[k];
+    if (!ind) return;
+    if (!ind.name.match(/^(\d+(?:\.\d+)*)/)) _noPfx.push({ key: k, ms: ind.max_score || 0 });
+  });
+  const _skipKeys = new Set();
+  for (let i = 0; i < _noPfx.length; i++) {
+    if (_noPfx[i].ms <= 0) continue;
+    let cSum = 0, cCount = 0;
+    const cKeys = [];
+    for (let j = 0; j < _noPfx.length; j++) {
+      if (i === j) continue;
+      cSum += _noPfx[j].ms;
+      cKeys.push(_noPfx[j].key);
+      if (_noPfx[j].ms > 0) cCount++;
+    }
+    if (cCount >= 2 && Math.abs(cSum - _noPfx[i].ms) < 0.01) {
+      cKeys.forEach(ck => _skipKeys.add(ck));
+    }
+  }
   keys.forEach(k => {
     const ind = detailData[k];
     if (!ind) return;
     const ms = ind.max_score;
+    // Check numeric prefix parent-child
+    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
+    let skip = false;
+    if (m) {
+      const parts = m[1].split('.');
+      if (parts.length > 1) {
+        parts.pop();
+        const pPfx = parts.join('.');
+        if (_pfxMap[pPfx] && _pfxMap[pPfx].ms > 0) skip = true;
+      }
+    }
+    // Check non-numeric group parent
+    if (_skipKeys.has(k)) skip = true;
+    if (skip) return;
     if (ms > 0) totalMax += ms;
     const d7 = ind.data && ind.data['7月'] ? (ind.data['7月']['坪山'] || 0) : 0;
     if (ms > 0) totalScore += d7;
