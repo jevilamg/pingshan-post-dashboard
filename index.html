@@ -199,7 +199,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
     <div style="overflow-x:auto">
       <table class="data-table" id="boardCompositionTable">
         <thead>
-          <tr><th>板块</th><th>基本分 + 加分</th><th>实际得分（7月）</th><th>得分率</th><th>占总分比</th></tr>
+          <tr><th>板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>实际得分（7月）</th><th>得分率</th><th>占总分比</th></tr>
         </thead>
         <tbody id="boardCompBody"></tbody>
       </table>
@@ -232,7 +232,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
     <div class="card">
       <div class="card-title"><span class="icon">📊</span> 各板块月度趋势</div>
       <div style="overflow-x:auto"><table class="data-table" id="boardTrendTable">
-        <thead><tr><th>板块</th><th>基础分+加扣分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>趋势</th><th>得分率</th></tr></thead>
+        <thead><tr><th>板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>趋势</th><th>得分率</th></tr></thead>
         <tbody id="boardTrendBody"></tbody>
       </table></div>
     </div>
@@ -241,7 +241,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
       <div style="overflow-x:auto">
         <table class="data-table" id="detailTable">
           <thead>
-            <tr><th>指标</th><th>基础分+加扣分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>6→7月变化</th><th>得分率</th></tr>
+            <tr><th>指标</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>6→7月变化</th><th>得分率</th></tr>
           </thead>
           <tbody id="detailTableBody"></tbody>
         </table>
@@ -297,7 +297,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
       <div style="overflow-x:auto">
         <table class="data-table" id="compareTable">
           <thead>
-            <tr><th>板块</th><th>基础分+加扣分</th><th>坪山</th><th>第1名</th><th>均值</th><th>坪山vs均值</th><th>排名</th><th>得分率</th></tr>
+            <tr><th>板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>坪山</th><th>第1名</th><th>均值</th><th>坪山vs均值</th><th>排名</th><th>得分率</th></tr>
           </thead>
           <tbody id="compareTableBody"></tbody>
         </table>
@@ -308,7 +308,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
       <div style="overflow-x:auto">
         <table class="data-table" id="rankTable">
           <thead>
-            <tr><th>板块</th><th>基础分+加扣分</th><th>坪山得分</th><th>排名</th><th>得分率</th></tr>
+            <tr><th>板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>坪山得分</th><th>排名</th><th>得分率</th></tr>
           </thead>
           <tbody id="rankTableBody"></tbody>
         </table>
@@ -757,7 +757,9 @@ boards.forEach((b, i) => {
   const rateColor = rateNum >= 80 ? 'var(--green)' : (rateNum >= 50 ? 'var(--yellow)' : 'var(--red)');
   compBody.innerHTML += `<tr>
     <td style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:${stackColors[i]};display:inline-block"></span>${b}</td>
-    <td>${bb.base} + ${bb.bonus} = <strong>${(bb.base + bb.bonus).toFixed(1)}</strong></td>
+    <td>${bb.base}</td>
+    <td>${bb.bonus}</td>
+    <td><strong>${(bb.base + bb.bonus).toFixed(1)}</strong></td>
     <td style="font-weight:700">${score.toFixed(2)}</td>
     <td><span style="color:${rateColor}">${rate}%</span></td>
     <td><span style="color:var(--text2)">${pct}%</span></td>
@@ -769,7 +771,9 @@ const totalMaxSum = totalBaseSum + totalBonusSum;
 const totalRate = (psTotal7 / totalMaxSum * 100).toFixed(0);
 compBody.innerHTML += `<tr style="border-top:2px solid var(--border);font-weight:700;color:var(--gold)">
   <td>合计</td>
-  <td>${totalBaseSum} + ${totalBonusSum.toFixed(1)} = <strong>${totalMaxSum.toFixed(1)}</strong></td>
+  <td>${totalBaseSum}</td>
+  <td>${totalBonusSum.toFixed(1)}</td>
+  <td><strong>${totalMaxSum.toFixed(1)}</strong></td>
   <td style="color:var(--gold)">${psTotal7.toFixed(2)}</td>
   <td><span style="color:var(--gold)">${totalRate}%</span></td>
   <td>100%</td>
@@ -880,12 +884,12 @@ subKeys.forEach(sk => {
 Object.entries(detailData).forEach(([col, info]) => {
   const indName = info.name;
   let maxS = info.max_score;
-  let maxDisplay;
+  let baseDisp, bonusDisp, totalDisp;
   if (indicatorBaseBonus[indName]) {
     const bb = indicatorBaseBonus[indName];
-    maxDisplay = `${bb.base}+${bb.bonus}=${(bb.base+bb.bonus).toFixed(1)}`;
-  } else if (info.max_display) { maxDisplay = info.max_display; }
-  else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
+    baseDisp = bb.base; bonusDisp = bb.bonus; totalDisp = (bb.base+bb.bonus).toFixed(1);
+  } else if (info.max_display) { baseDisp = info.max_display; bonusDisp = ''; totalDisp = ''; }
+  else { baseDisp = maxS > 0 ? maxS.toFixed(1) : '-'; bonusDisp = ''; totalDisp = ''; }
   const v4 = info.data['4月']?.['坪山'] || 0;
   const v5 = info.data['5月']?.['坪山'] || 0;
   const v6 = info.data['6月']?.['坪山'] || 0;
@@ -920,7 +924,9 @@ Object.entries(detailData).forEach(([col, info]) => {
   const displayName = info.name.length > 38 ? info.name.substring(0, 38) + '…' : info.name;
   tbody.innerHTML += `<tr${rowStyle}>
     <td style="${nameStyle}">${displayName}</td>
-    <td>${maxDisplay}</td>
+    <td>${baseDisp}</td>
+    <td>${bonusDisp}</td>
+    <td>${totalDisp}</td>
     <td>${v4.toFixed(2)}</td>
     <td>${v5.toFixed(2)}</td>
     <td>${v6.toFixed(2)}</td>
@@ -935,7 +941,13 @@ Object.entries(detailData).forEach(([col, info]) => {
 function buildChangeRow(col, c, detailData, keyToDept, deptColorsWeak) {
   const info = detailData[col];
   const ms = info ? info.max_score : 0;
-  const maxDisplay = info ? (info.max_display || ms) : 0;
+  let bbBase = '', bbBonus = '', bbTotal = '';
+  const _indName = info ? info.name : '';
+  if (info && typeof indicatorBaseBonus !== 'undefined' && indicatorBaseBonus[_indName]) {
+    const bb = indicatorBaseBonus[_indName];
+    bbBase = bb.base; bbBonus = bb.bonus; bbTotal = (bb.base+bb.bonus).toFixed(1);
+  } else if (info && info.max_display) { bbBase = info.max_display; }
+  else if (ms > 0) { bbBase = ms.toFixed(1); }
   const v6 = c.v7 !== undefined ? c.v7 : 0;
   const rate = ms > 0 ? (v6 / ms * 100).toFixed(2) : '-';
   const rateNum = ms > 0 ? v6 / ms : 0;
@@ -948,7 +960,9 @@ function buildChangeRow(col, c, detailData, keyToDept, deptColorsWeak) {
   const dc = deptColorsWeak[dept] || 'var(--text2)';
   const displayName = c.name.length > 22 ? c.name.substring(0, 22) + '…' : c.name;
   return `<td style="font-weight:500" title="${c.name}">${displayName}</td>
-    <td>${maxDisplay}</td>
+    <td>${bbBase}</td>
+    <td>${bbBonus}</td>
+    <td>${bbTotal}</td>
     <td style="font-weight:700;color:var(--ps-highlight)">${v6.toFixed(2)}</td>
     <td style="color:${rateColor};font-weight:600">${rate}%</td>
     <td class="${chgClass}" style="font-weight:600">${chgText}</td>
@@ -958,7 +972,7 @@ function buildChangeRow(col, c, detailData, keyToDept, deptColorsWeak) {
 // 进步最大 TOP5
 const topImpHead = document.getElementById('topImpHead');
 const topImpBody = document.getElementById('topImprovementsBody');
-topImpHead.innerHTML = '<th>指标名称</th><th>基础分+加扣分</th><th>7月得分</th><th>得分率</th><th>6→7月变化</th><th>责任单位</th>';
+topImpHead.innerHTML = '<th>指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>7月得分</th><th>得分率</th><th>6→7月变化</th><th>责任单位</th>';
 const improvements = changes.filter(c => c.change > 0).slice(0, 5);
 improvements.forEach(c => {
   topImpBody.innerHTML += `<tr>${buildChangeRow(c.key, c, detailData, keyToDept, deptColorsWeak)}</tr>`;
@@ -967,7 +981,7 @@ improvements.forEach(c => {
 // 退步最大 TOP5
 const topDecHead = document.getElementById('topDecHead');
 const topDecBody = document.getElementById('topDeclinesBody');
-topDecHead.innerHTML = '<th>指标名称</th><th>基础分+加扣分</th><th>7月得分</th><th>得分率</th><th>6→7月变化</th><th>责任单位</th>';
+topDecHead.innerHTML = '<th>指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>7月得分</th><th>得分率</th><th>6→7月变化</th><th>责任单位</th>';
 const declines = changes.filter(c => c.change < 0).slice(0, 5);
 if (declines.length > 0) {
   declines.forEach(c => {
@@ -1007,13 +1021,16 @@ if (zeroItems.length > 0) {
 
 // ===== Comparison Table =====
 const compareBody = document.getElementById('compareTableBody');
-boardComp.forEach(bc => {
+boardComp.forEach((bc, i) => {
+  const bb = boardBaseBonus[i];
   const rate = bc.max_possible > 0 ? (bc.pingshan / bc.max_possible * 100).toFixed(0) : 0;
   const rankCls = bc.rank === 1 ? 'rank-1' : (bc.rank >= 7 ? 'rank-bottom' : '');
   const diffCls = bc.diff_mean > 0 ? 'change-up' : 'change-down';
   compareBody.innerHTML += `<tr class="${bc.rank === 1 ? 'ps-row' : ''}">
     <td>${bc.board}</td>
-    <td>${bc.max_possible}</td>
+    <td>${bb.base}</td>
+    <td>${bb.bonus}</td>
+    <td><strong>${(bb.base+bb.bonus).toFixed(1)}</strong></td>
     <td style="font-weight:700">${bc.pingshan.toFixed(2)}</td>
     <td>${bc.top_score.toFixed(2)} (${bc.top_unit})</td>
     <td>${bc.mean.toFixed(2)}</td>
@@ -1031,7 +1048,9 @@ boardComp.forEach((bc, i) => {
   const rateColor = rate >= 80 ? 'var(--green)' : (rate >= 50 ? 'var(--yellow)' : 'var(--red)');
   rankBody.innerHTML += `<tr class="${bc.rank === 1 ? 'ps-row' : ''}">
     <td>${bc.board}</td>
-    <td>${bc.max_possible}</td>
+    <td>${boardBaseBonus[i].base}</td>
+    <td>${boardBaseBonus[i].bonus}</td>
+    <td><strong>${(boardBaseBonus[i].base+boardBaseBonus[i].bonus).toFixed(1)}</strong></td>
     <td style="font-weight:700">${bc.pingshan.toFixed(2)}</td>
     <td class="${rankCls}">${bc.rank}/9</td>
     <td style="color:${rateColor}">${rate}%</td>
@@ -1078,7 +1097,7 @@ boardComp.filter(bc => bc.rank >= 6).forEach(bc => {
 const weakHead = document.getElementById('weakSubHead');
 const weakBody = document.getElementById('weakSubBody');
 // keyToDept and deptColorsWeak already defined at top
-weakHead.innerHTML = '<th>指标名称</th><th>基础分+加扣分</th><th>坪山得分</th><th>得分率</th><th>全市排名</th><th>vs第1名</th><th>责任部门</th>';
+weakHead.innerHTML = '<th>指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>坪山得分</th><th>得分率</th><th>全市排名</th><th>vs第1名</th><th>责任部门</th>';
 const weakItems = Object.entries(detailData)
   .filter(([col, info]) => subKeys.has(col) && info.max_score > 0)
   .map(([col, info]) => {
@@ -1091,7 +1110,8 @@ const weakItems = Object.entries(detailData)
     const topScore = sorted[0].score;
     const gap = topScore - v6;
     const dept = keyToDept[col] || '-';
-    return { col, name: info.name, max: info.max_score, maxDisplay: info.max_display || info.max_score, v6, rate, psRank, topScore, gap, dept };
+    const _bb = (typeof indicatorBaseBonus !== 'undefined' && indicatorBaseBonus[info.name]) ? indicatorBaseBonus[info.name] : null;
+    return { col, name: info.name, max: info.max_score, bbBase: _bb ? _bb.base : (info.max_display || info.max_score), bbBonus: _bb ? _bb.bonus : '', bbTotal: _bb ? (_bb.base+_bb.bonus).toFixed(1) : '', v6, rate, psRank, topScore, gap, dept };
   })
   .sort((a, b) => a.rate - b.rate)
   .slice(0, 10);
@@ -1104,7 +1124,7 @@ weakItems.forEach(item => {
   const dc = deptColorsWeak[item.dept] || 'var(--text2)';
   const displayName = item.name.length > 24 ? item.name.substring(0, 24) + '…' : item.name;
   let rowHtml = `<td style="font-weight:500" title="${item.name}">${displayName}</td>`;
-  rowHtml += `<td>${item.maxDisplay}</td>`;
+  rowHtml += `<td>${item.bbBase}</td><td>${item.bbBonus}</td><td>${item.bbTotal}</td>`;
   rowHtml += `<td style="font-weight:700;color:var(--ps-highlight)">${item.v6.toFixed(2)}</td>`;
   rowHtml += `<td style="color:${rateColor};font-weight:600">${ratePct}%</td>`;
   rowHtml += `<td class="${rankCls}">${item.psRank}/9</td>`;
@@ -1118,7 +1138,7 @@ const scHead = document.getElementById('subCompareHead');
 const scBody = document.getElementById('subCompareBody');
 // 坪山排第一，其他区局按原顺序
 const unitsWithPsFirst = ['坪山', ...units.filter(u => u !== '坪山')];
-let scHeadHtml = '<th>指标</th><th>责任部门</th><th>基础分+加扣分</th>';
+let scHeadHtml = '<th>指标</th><th>责任部门</th><th>基本分</th><th>加扣分</th><th>总分</th>';
 unitsWithPsFirst.forEach(u => { scHeadHtml += `<th>${u}</th>`; });
 scHeadHtml += '<th>排名</th><th>得分率</th>';
 scHead.innerHTML = scHeadHtml;
@@ -1126,12 +1146,12 @@ Object.entries(detailData).forEach(([col, info]) => {
   if (!subKeys.has(col)) return;
   const indName = info.name;
   let maxS = info.max_score;
-  let maxDisplay;
+  let scBaseDisp, scBonusDisp, scTotalDisp;
   if (indicatorBaseBonus[indName]) {
     const bb = indicatorBaseBonus[indName];
-    maxDisplay = `${bb.base}+${bb.bonus}=${(bb.base+bb.bonus).toFixed(1)}`;
-  } else if (info.max_display) { maxDisplay = info.max_display; }
-  else { maxDisplay = maxS > 0 ? maxS.toFixed(1) : '-'; }
+    scBaseDisp = bb.base; scBonusDisp = bb.bonus; scTotalDisp = (bb.base+bb.bonus).toFixed(1);
+  } else if (info.max_display) { scBaseDisp = info.max_display; scBonusDisp = ''; scTotalDisp = ''; }
+  else { scBaseDisp = maxS > 0 ? maxS.toFixed(1) : '-'; scBonusDisp = ''; scTotalDisp = ''; }
   const scores = unitsWithPsFirst.map(u => ({ unit: u, score: info.data['7月']?.[u] || 0 }));
   const sorted = [...scores].sort((a, b) => b.score - a.score);
   const psRank = sorted.findIndex(s => s.unit === '坪山') + 1;
@@ -1145,7 +1165,7 @@ Object.entries(detailData).forEach(([col, info]) => {
   const dc = (typeof deptColorsWeak !== 'undefined' ? deptColorsWeak[dept] : null) || 'var(--text2)';
   let rowHtml = `<td style="font-weight:500">${displayName}</td>`;
   rowHtml += `<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:${dc}22;color:${dc};border:1px solid ${dc}40">${dept}</span></td>`;
-  rowHtml += `<td>${maxDisplay}</td>`;
+  rowHtml += `<td>${scBaseDisp}</td><td>${scBonusDisp}</td><td>${scTotalDisp}</td>`;
   scores.forEach(s => {
     const isPs = s.unit === '坪山';
     const cellStyle = isPs ? ' style="font-weight:700;color:var(--ps-highlight)"' : '';
@@ -1172,7 +1192,9 @@ boards.forEach((b, i) => {
   const rateColor = rate >= 80 ? 'var(--green)' : (rate >= 50 ? 'var(--yellow)' : 'var(--red)');
   btBody.innerHTML += `<tr>
     <td style="font-weight:500">${b}</td>
-    <td>${maxV}</td>
+    <td>${bb.base}</td>
+    <td>${bb.bonus}</td>
+    <td><strong>${(bb.base+bb.bonus).toFixed(1)}</strong></td>
     <td>${v4.toFixed(2)}</td>
     <td>${v5.toFixed(2)}</td>
     <td>${v6.toFixed(2)}</td>
@@ -1324,9 +1346,17 @@ function showDept(dept) {
       <div style="font-size:12px;color:var(--text2);">对口指标数</div>
       <div style="font-size:24px;font-weight:700;color:${deptColors[dept]}">${keys.length}项</div>
     </div>
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">基本分+加分</div>
-      <div style="font-size:24px;font-weight:700;">${Math.round(totalMax*100)/100}</div>
+    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
+      <div style="font-size:12px;color:var(--text2);">基本分</div>
+      <div style="font-size:24px;font-weight:700;">${(() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.base : a; }, 0); })()}</div>
+    </div>
+    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
+      <div style="font-size:12px;color:var(--text2);">加扣分</div>
+      <div style="font-size:24px;font-weight:700;">${(() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.bonus : a; }, 0); })()}</div>
+    </div>
+    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
+      <div style="font-size:12px;color:var(--text2);">总分</div>
+      <div style="font-size:24px;font-weight:700;">${(() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.base+b.bonus : a; }, 0); })()}</div>
     </div>
     <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:12px 16px;">
       <div style="font-size:12px;color:var(--text2);">7月得分合计</div>
@@ -1340,7 +1370,7 @@ function showDept(dept) {
 
   // Detail table
   const head = document.getElementById('deptIndHead');
-  head.innerHTML = '<th>序号</th><th>指标名称</th><th>基础分+加扣分</th><th>4月得分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
+  head.innerHTML = '<th>序号</th><th>指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月得分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
 
   const body = document.getElementById('deptIndBody');
   body.innerHTML = '';
@@ -1383,8 +1413,18 @@ function showDept(dept) {
       <td style="font-weight:500">${name}</td>
       <td>${(() => {
         const bb = keyToBaseBonus[k];
-        if (bb) return `${bb.base}+${bb.bonus}=${(bb.base+bb.bonus).toFixed(1)}`;
-        return maxD;
+        if (bb) return bb.base;
+        return maxD || '';
+      })()}</td>
+      <td>${(() => {
+        const bb = keyToBaseBonus[k];
+        if (bb) return bb.bonus;
+        return '';
+      })()}</td>
+      <td>${(() => {
+        const bb = keyToBaseBonus[k];
+        if (bb) return (bb.base+bb.bonus).toFixed(1);
+        return '';
       })()}</td>
       <td>${d4}</td>
       <td>${d5}</td>
