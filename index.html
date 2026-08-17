@@ -1049,6 +1049,7 @@ function showDept(dept) {
     if (ms > 0) totalMax += ms;
     const d7 = ind.data && ind.data['7月'] ? (ind.data['7月']['坪山'] || 0) : 0;
     if (ms > 0) totalScore += d7;
+    const d6raw = ind.data && ind.data['6月'] ? ind.data['6月']['坪山'] : null;
     const d6 = d6raw !== null && d6raw !== undefined ? Math.round(d6raw * 100) / 100 : '-';
     const score = typeof d6 === 'number' ? d6 : 0;
     const rate = ms > 0 ? (score / ms * 100) : 0;
