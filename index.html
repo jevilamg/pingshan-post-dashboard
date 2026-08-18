@@ -168,12 +168,12 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
     <div class="kpi-card">
       <div class="kpi-value green">77.89</div>
       <div class="kpi-label">7月总分</div>
-      <div class="kpi-trend down">↓ 较4月 -0.39分</div>
+      <div class="kpi-trend down">↓ 较5月 -4.40分</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-value" style="color:var(--yellow)">第3名</div>
       <div class="kpi-label">7月排名（9区局）</div>
-      <div class="kpi-trend">→ 4月第3→7月第3 持平</div>
+      <div class="kpi-trend">→ 5月第3→7月第3 持平</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-value green">+4.53</div>
@@ -235,16 +235,16 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
     <div class="card">
       <div class="card-title"><span class="icon">📊</span> 各板块月度趋势</div>
       <div style="overflow-x:auto"><table class="data-table" id="boardTrendTable">
-        <thead><tr><th class="text-left">板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>趋势</th><th>得分率</th></tr></thead>
+        <thead><tr><th class="text-left">板块</th><th>基本分</th><th>加扣分</th><th>总分</th><th>5月</th><th>6月</th><th>7月</th><th>趋势</th><th>得分率</th></tr></thead>
         <tbody id="boardTrendBody"></tbody>
       </table></div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="icon">📋</span> 坪山全量指标月度变化（4→5→7月）</div>
+      <div class="card-title"><span class="icon">📋</span> 坪山全量指标月度变化（5→6→7月）</div>
       <div style="overflow-x:auto">
         <table class="data-table" id="detailTable">
           <thead>
-            <tr><th class="text-left">指标</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>6→7月变化</th><th>得分率</th></tr>
+            <tr><th class="text-left">指标</th><th>基本分</th><th>加扣分</th><th>总分</th><th>5月</th><th>6月</th><th>7月</th><th>6→7月变化</th><th>得分率</th></tr>
           </thead>
           <tbody id="detailTableBody"></tbody>
         </table>
@@ -254,7 +254,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
 
   <div id="sub-highlights" class="sub-tab-content">
     <div class="card" style="border-left: 3px solid var(--green);">
-      <div class="card-title"><span class="icon">🚀</span> 进步最大 TOP5（4月→7月）</div>
+      <div class="card-title"><span class="icon">🚀</span> 进步最大 TOP5（5月→7月）</div>
       <div style="overflow-x:auto">
         <table class="data-table" id="topImprovementsTable">
           <thead><tr id="topImpHead"></tr></thead>
@@ -263,7 +263,7 @@ body { background: var(--bg); color: var(--text); font-family: 'SF Pro Display',
       </div>
     </div>
     <div class="card" style="margin-top:12px; border-left: 3px solid var(--red);">
-      <div class="card-title"><span class="icon">⚠️</span> 退步最大 TOP5（4月→7月）</div>
+      <div class="card-title"><span class="icon">⚠️</span> 退步最大 TOP5（5月→7月）</div>
       <div style="overflow-x:auto">
         <table class="data-table" id="topDeclinesTable">
           <thead><tr id="topDecHead"></tr></thead>
@@ -532,7 +532,7 @@ const indicatorBaseBonus = {
 const keyToBaseBonus = {
   "4": {base: 7.0, bonus: 3.5},
   "5": {base: 7.0, bonus: 3.5},
-  "7": {base: 0.0, bonus: 2.0},
+  "7": {base: 0.0, bonus: 0.0},
   "9": {base: 4.0, bonus: 4.8},
   "10": {base: 3.0, bonus: 0.6},
   "12": {base: 1.0, bonus: 0.2},
@@ -573,7 +573,7 @@ const keyToBaseBonus = {
   "74": {base: 0.0, bonus: 0},
   "76": {base: 2.0, bonus: 0.0},
   "78": {base: 3.0, bonus: 0.0},
-  "80": {base: 0.0, bonus: 5.0},
+  "80": {base: 0.0, bonus: 0.0},
   "81": {base: 0.0, bonus: 1.5},
   "83": {base: 0.0, bonus: 2.5},
   "85": {base: 0.0, bonus: 0.5},
@@ -603,7 +603,7 @@ const keyToBaseBonus = {
   "126": {base: 0.0, bonus: 3.0},
   "128": {base: 6.0, bonus: 3.0},
   "129": {base: 6.0, bonus: 3.0},
-  "131": {base: 0.0, bonus: 2.0},
+  "131": {base: 0.0, bonus: 0.0},
   "133": {base: 4.0, bonus: 0.8},
   "135": {base: 2.0, bonus: 0.4},
   "137": {base: 2.0, bonus: 4.0},
@@ -634,7 +634,7 @@ const units = DATA.units;
 const boards = DATA.boards;
 const monthsTrend = DATA.months_trend;
 const boardComp = DATA.board_comparison;
-const changes = DATA.pingshan_changes;
+const changes = DATA.pingshan_changes.map(c => { const v5 = detailData[c.key]?.data?.['5月']?.['坪山'] ?? c.v4; return {...c, change: c.v7 - v5}; });
 const deptMapping = DATA.dept_mapping || {};
 // Build reverse mapping: indicator key -> department name
 const keyToDept = {};
@@ -667,18 +667,18 @@ function switchSubTab2(id) {
 }
 
 // ===== CHART: Total Trend (坪山 only, bar chart) =====
-const psTotals = ['4月','5月','6月','7月'].map(m => monthsTrend[m]['坪山'].total);
-const psRanks = ['4月','5月','6月','7月'].map(m => {
+const psTotals = ['5月','6月','7月'].map(m => monthsTrend[m]['坪山'].total);
+const psRanks = ['5月','6月','7月'].map(m => {
   const allTotals = units.map(u => ({unit: u, total: monthsTrend[m][u].total})).sort((a,b) => b.total - a.total);
   return allTotals.findIndex(d => d.unit === '坪山') + 1;
 });
 new Chart(document.getElementById('totalTrendChart'), {
   type: 'bar',
   data: {
-    labels: ['4月', '5月', '6月', '7月'],
+    labels: ['5月', '6月', '7月'],
     datasets: [{
       data: psTotals,
-      backgroundColor: ['#42a5f5', '#ffa726', '#00e676', '#ab47bc'],
+      backgroundColor: ['#ffa726', '#00e676', '#ab47bc'],
       borderRadius: 8,
       barPercentage: 0.5
     }]
@@ -910,11 +910,10 @@ Object.entries(detailData).forEach(([col, info]) => {
     baseDisp = bb.base; bonusDisp = bb.bonus; totalDisp = fmtNum(bb.base+bb.bonus);
   } else if (info.max_display) { baseDisp = info.max_display; bonusDisp = ''; totalDisp = ''; }
   else { baseDisp = maxS > 0 ? fmtNum(maxS) : '-'; bonusDisp = ''; totalDisp = ''; }
-  const v4 = info.data['4月']?.['坪山'] || 0;
   const v5 = info.data['5月']?.['坪山'] || 0;
   const v6 = info.data['6月']?.['坪山'] || 0;
   const v7 = info.data['7月']?.['坪山'] || 0;
-  const chg = v7 - v4;
+  const chg = v7 - v5;
   const chg67 = v7 - v6;
   let rateDisplay, rateColor;
   if (maxS > 0) {
@@ -947,7 +946,6 @@ Object.entries(detailData).forEach(([col, info]) => {
     <td>${baseDisp}</td>
     <td>${bonusDisp}</td>
     <td>${totalDisp}</td>
-    <td>${fmtNum(v4)}</td>
     <td>${fmtNum(v5)}</td>
     <td>${fmtNum(v6)}</td>
     <td>${fmtNum(v7)}</td>
@@ -1017,7 +1015,6 @@ const zeroBody = document.getElementById('zeroBody');
 zeroHead.innerHTML = '<th class="text-left">指标名称</th><th class="text-left">原因</th><th class="text-left">责任单位</th>';
 const zeroItems = Object.entries(detailData).filter(([col, info]) => {
   if (typeof info.max_score !== 'number' || info.max_score <= 0) return false;
-  const v4 = info.data['4月']?.['坪山'] || 0;
   const v5 = info.data['5月']?.['坪山'] || 0;
   const v6 = info.data['6月']?.['坪山'] || 0;
   const v7 = info.data['7月']?.['坪山'] || 0;
@@ -1201,11 +1198,10 @@ const btBody = document.getElementById('boardTrendBody');
 boards.forEach((b, i) => {
   const bb = boardBaseBonus[i];
   const maxV = bb.base + bb.bonus;
-  const v4 = monthsTrend['4月']['坪山'].boards[b];
   const v5 = monthsTrend['5月']['坪山'].boards[b];
   const v6 = monthsTrend['6月']['坪山'].boards[b];
   const v7 = monthsTrend['7月']['坪山'].boards[b];
-  const chg = v7 - v4;
+  const chg = v7 - v5;
   const rate = fmtPct(v7 / maxV * 100);
   const trendCls = chg > 0.01 ? 'change-up' : (chg < -0.01 ? 'change-down' : '');
   const trendTxt = chg > 0.01 ? '↑' + fmtNum(chg) : (chg < -0.01 ? '↓' + fmtNum(Math.abs(chg)) : '→');
@@ -1215,7 +1211,6 @@ boards.forEach((b, i) => {
     <td>${bb.base}</td>
     <td>${bb.bonus}</td>
     <td><strong>${fmtNum(bb.base+bb.bonus)}</strong></td>
-    <td>${fmtNum(v4)}</td>
     <td>${fmtNum(v5)}</td>
     <td>${fmtNum(v6)}</td>
     <td>${fmtNum(v7)}</td>
@@ -1291,61 +1286,21 @@ function showDept(dept) {
     }
   });
 
-  const keys = deptMapping[dept] || [];
-  if (keys.length === 0) return;
+  const _allKeys = deptMapping[dept] || [];
+  if (_allKeys.length === 0) return;
+  // Global non-leaf nodes: indicators that have children anywhere in the system
+  const _globalNonLeaf = new Set(['4','9','22','29','38','43','50','57','68','73','89','90','95','101','106','107','112','119','128','137','151','162']);
+  // Filter to leaf nodes only
+  const keys = _allKeys.filter(k => !_globalNonLeaf.has(k));
 
   // Compute summary stats from 7月 data
   const latestData = monthsTrend['7月'] && monthsTrend['7月']['坪山'] ? monthsTrend['7月']['坪山'] : null;
   let totalMax = 0, totalScore = 0, topInds = [], weakInds = [];
 
-  // Build prefix map for parent-child dedup (avoid double-counting sub-indicators)
-  const _pfxMap = {};
-  keys.forEach(k => {
-    const ind = detailData[k];
-    if (!ind) return;
-    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
-    if (m) _pfxMap[m[1]] = { key: k, ms: ind.max_score || 0 };
-  });
-  // Detect non-numeric group parents (e.g. "代理金融跨年营销活动" with sub-items summing to its max)
-  const _noPfx = [];
-  keys.forEach(k => {
-    const ind = detailData[k];
-    if (!ind) return;
-    if (!ind.name.match(/^(\d+(?:\.\d+)*)/)) _noPfx.push({ key: k, ms: ind.max_score || 0 });
-  });
-  const _skipKeys = new Set();
-  for (let i = 0; i < _noPfx.length; i++) {
-    if (_noPfx[i].ms <= 0) continue;
-    let cSum = 0, cCount = 0;
-    const cKeys = [];
-    for (let j = 0; j < _noPfx.length; j++) {
-      if (i === j) continue;
-      cSum += _noPfx[j].ms;
-      cKeys.push(_noPfx[j].key);
-      if (_noPfx[j].ms > 0) cCount++;
-    }
-    if (cCount >= 2 && Math.abs(cSum - _noPfx[i].ms) < 0.01) {
-      cKeys.forEach(ck => _skipKeys.add(ck));
-    }
-  }
   keys.forEach(k => {
     const ind = detailData[k];
     if (!ind) return;
     const ms = ind.max_score;
-    // Check numeric prefix parent-child
-    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
-    let skip = false;
-    if (m) {
-      const parts = m[1].split('.');
-      if (parts.length > 1) {
-        parts.pop();
-        const pPfx = parts.join('.');
-        if (_pfxMap[pPfx] && _pfxMap[pPfx].ms > 0) skip = true;
-      }
-    }
-    // Check non-numeric group parent
-    if (_skipKeys.has(k)) skip = true;
-    if (skip) return;
     if (ms > 0) totalMax += ms;
     const d7 = ind.data && ind.data['7月'] ? (ind.data['7月']['坪山'] || 0) : 0;
     if (ms > 0) totalScore += d7;
@@ -1390,7 +1345,7 @@ function showDept(dept) {
 
   // Detail table
   const head = document.getElementById('deptIndHead');
-  head.innerHTML = '<th>序号</th><th class="text-left">指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>4月得分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
+  head.innerHTML = '<th>序号</th><th class="text-left">指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
 
   const body = document.getElementById('deptIndBody');
   body.innerHTML = '';
@@ -1400,8 +1355,6 @@ function showDept(dept) {
     const name = ind.name;
     const maxD = ind.max_display;
     const ms = ind.max_score;
-    const d4raw = ind.data && ind.data['4月'] ? ind.data['4月']['坪山'] : null;
-    const d4 = d4raw !== null && d4raw !== undefined ? Math.round(d4raw * 100) / 100 : '-';
     const d5raw = ind.data && ind.data['5月'] ? ind.data['5月']['坪山'] : null;
     const d5 = d5raw !== null && d5raw !== undefined ? Math.round(d5raw * 100) / 100 : '-';
     const d6raw = ind.data && ind.data['6月'] ? ind.data['6月']['坪山'] : null;
@@ -1420,11 +1373,11 @@ function showDept(dept) {
       else chg67 = '<span style="color:var(--text2)">→</span>';
     }
 
-    // Trend: compare 4→7
+    // Trend: compare 5→7
     let trend = '';
-    if (typeof d4 === 'number' && typeof d7 === 'number') {
-      if (d7 > d4) trend = '<span style="color:var(--green)">↑</span>';
-      else if (d7 < d4) trend = '<span style="color:var(--red)">↓</span>';
+    if (typeof d5 === 'number' && typeof d7 === 'number') {
+      if (d7 > d5) trend = '<span style="color:var(--green)">↑</span>';
+      else if (d7 < d5) trend = '<span style="color:var(--red)">↓</span>';
       else trend = '<span style="color:var(--text2)">→</span>';
     }
 
@@ -1446,7 +1399,6 @@ function showDept(dept) {
         if (bb) return fmtNum(bb.base+bb.bonus);
         return '';
       })()}</td>
-      <td>${typeof d4==='number'?fmtNum(d4):d4}</td>
       <td>${typeof d5==='number'?fmtNum(d5):d5}</td>
       <td>${typeof d6==='number'?fmtNum(d6):d6}</td>
       <td style="font-weight:600">${typeof d7==='number'?fmtNum(d7):d7}</td>
