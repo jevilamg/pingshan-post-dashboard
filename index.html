@@ -634,7 +634,7 @@ const units = DATA.units;
 const boards = DATA.boards;
 const monthsTrend = DATA.months_trend;
 const boardComp = DATA.board_comparison;
-const changes = DATA.pingshan_changes.map(c => { const v5 = detailData[c.key]?.data?.['5月']?.['坪山'] ?? c.v4; return {...c, change: c.v7 - v5}; });
+const changes = DATA.pingshan_changes.map(c => { const v5 = DATA.detail_all[c.key]?.data?.['5月']?.['坪山'] ?? c.v4; return {...c, change: c.v7 - v5}; });
 const deptMapping = DATA.dept_mapping || {};
 // Build reverse mapping: indicator key -> department name
 const keyToDept = {};
