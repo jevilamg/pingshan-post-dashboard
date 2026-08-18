@@ -1295,15 +1295,67 @@ function showDept(dept) {
 
   // Compute summary stats from 7月 data
   const latestData = monthsTrend['7月'] && monthsTrend['7月']['坪山'] ? monthsTrend['7月']['坪山'] : null;
-  let totalMax = 0, totalScore = 0, topInds = [], weakInds = [];
+  let topInds = [], weakInds = [];
+
+  // Separate basic score (ms > 0) and bonus/deduction (ms <= 0)
+  let basicMax = 0, basicScore = 0, extraMax = 0, extraScore = 0;
+
+  // Build prefix map for parent-child dedup (avoid double-counting sub-indicators)
+  const _pfxMap = {};
+  keys.forEach(k => {
+    const ind = detailData[k];
+    if (!ind) return;
+    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
+    if (m) _pfxMap[m[1]] = { key: k, ms: ind.max_score || 0 };
+  });
+  // Detect non-numeric group parents
+  const _noPfx = [];
+  keys.forEach(k => {
+    const ind = detailData[k];
+    if (!ind) return;
+    if (!ind.name.match(/^(\d+(?:\.\d+)*)/)) _noPfx.push({ key: k, ms: ind.max_score || 0 });
+  });
+  const _skipKeys = new Set();
+  for (let i = 0; i < _noPfx.length; i++) {
+    if (_noPfx[i].ms <= 0) continue;
+    let cSum = 0, cCount = 0;
+    const cKeys = [];
+    for (let j = 0; j < _noPfx.length; j++) {
+      if (i === j) continue;
+      cSum += _noPfx[j].ms;
+      cKeys.push(_noPfx[j].key);
+      if (_noPfx[j].ms > 0) cCount++;
+    }
+    if (cCount >= 2 && Math.abs(cSum - _noPfx[i].ms) < 0.01) {
+      cKeys.forEach(ck => _skipKeys.add(ck));
+    }
+  }
 
   keys.forEach(k => {
     const ind = detailData[k];
     if (!ind) return;
     const ms = ind.max_score;
-    if (ms > 0) totalMax += ms;
+    // Check numeric prefix parent-child
+    const m = ind.name.match(/^(\d+(?:\.\d+)*)/);
+    let skip = false;
+    if (m) {
+      const parts = m[1].split('.');
+      if (parts.length > 1) {
+        parts.pop();
+        const pPfx = parts.join('.');
+        if (_pfxMap[pPfx] && _pfxMap[pPfx].ms > 0) skip = true;
+      }
+    }
+    // Check non-numeric group parent
+    if (_skipKeys.has(k)) skip = true;
+    if (skip) return;
     const d7 = ind.data && ind.data['7月'] ? (ind.data['7月']['坪山'] || 0) : 0;
-    if (ms > 0) totalScore += d7;
+    if (ms > 0) {
+      basicMax += ms;
+      basicScore += d7;
+    } else {
+      extraScore += d7;
+    }
     const d6raw = ind.data && ind.data['6月'] ? ind.data['6月']['坪山'] : null;
     const d6 = d6raw !== null && d6raw !== undefined ? Math.round(d6raw * 100) / 100 : '-';
     const score = typeof d6 === 'number' ? d6 : 0;
@@ -1312,40 +1364,43 @@ function showDept(dept) {
     if (rate < 60 && ms > 0) weakInds.push(ind.name);
   });
 
-  const overallRate = totalMax > 0 ? (totalScore / totalMax * 100) : -1;
+  const totalScore = basicScore + extraScore;
+  const totalMax = basicMax + extraMax;
+  const basicRate = basicMax > 0 ? (basicScore / basicMax * 100).toFixed(1) : '-';
+  const extraRate = extraMax > 0 ? (extraScore / extraMax * 100).toFixed(1) : (extraScore !== 0 ? (extraScore > 0 ? '+' : '') + extraScore.toFixed(2) : '0');
+  const overallRate = totalMax > 0 ? (totalScore / totalMax * 100).toFixed(1) : '-';
+  const basicRateNum = parseFloat(basicRate);
+  const basicRateColor = basicRate !== '-' ? (basicRateNum >= 80 ? 'var(--green)' : basicRateNum >= 60 ? 'var(--gold)' : 'var(--red)') : 'var(--text2)';
+  const extraRateColor = extraScore > 0.01 ? 'var(--green)' : (extraScore < -0.01 ? 'var(--red)' : 'var(--text2)');
+  const overallRateColor = overallRate !== '-' ? (parseFloat(overallRate) >= 80 ? 'var(--green)' : parseFloat(overallRate) >= 60 ? 'var(--gold)' : 'var(--red)') : 'var(--text2)';
+  const dc = deptColors[dept];
 
-  // Summary cards
+  // Summary cards: 基本分 / 加扣分 / 总分
   const summaryDiv = document.getElementById('deptSummaryCards');
-  summaryDiv.innerHTML = `
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">对口指标数</div>
-      <div style="font-size:24px;font-weight:700;color:${deptColors[dept]}">${keys.length}项</div>
+  summaryDiv.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid ${dc};">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">基本分</div>
+      <div style="font-size:26px;font-weight:700;color:${basicRateColor}">${basicScore.toFixed(2)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px;">满分 ${basicMax}</div>
+      <div style="font-size:13px;font-weight:600;color:${basicRateColor};margin-top:4px;">${basicRate}${basicRate !== '-' ? '%' : ''}</div>
     </div>
-    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">基本分</div>
-      <div style="font-size:24px;font-weight:700;">${fmtNum((() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.base : a; }, 0); })())}</div>
+    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid var(--yellow);">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">加扣分</div>
+      <div style="font-size:26px;font-weight:700;color:${extraRateColor}">${extraScore >= 0 ? '+' : ''}${extraScore.toFixed(2)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px;">分值 ${extraMax}</div>
+      <div style="font-size:13px;font-weight:600;color:${extraRateColor};margin-top:4px;">${extraRate}${extraRate !== '-' && !isNaN(parseFloat(extraRate)) ? '%' : ''}</div>
     </div>
-    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">加扣分</div>
-      <div style="font-size:24px;font-weight:700;">${fmtNum((() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.bonus : a; }, 0); })())}</div>
+    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid var(--gold);">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">总分</div>
+      <div style="font-size:26px;font-weight:700;color:${overallRateColor}">${totalScore.toFixed(2)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px;">满分 ${totalMax}</div>
+      <div style="font-size:13px;font-weight:600;color:${overallRateColor};margin-top:4px;">${overallRate}${overallRate !== '-' ? '%' : ''}</div>
     </div>
-    <div style="flex:1;min-width:100px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">总分</div>
-      <div style="font-size:24px;font-weight:700;">${fmtNum((() => { return keys.reduce((a,k) => { const b = keyToBaseBonus[k]; return b ? a+b.base+b.bonus : a; }, 0); })())}</div>
-    </div>
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">7月得分合计</div>
-      <div style="font-size:24px;font-weight:700;">${fmtNum(totalScore)}</div>
-    </div>
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:12px 16px;">
-      <div style="font-size:12px;color:var(--text2);">综合得分率</div>
-      <div style="font-size:24px;font-weight:700;color:${overallRate >= 80 ? 'var(--green)' : overallRate >= 60 ? 'var(--gold)' : 'var(--red)'}">${overallRate >= 0 ? fmtPct(overallRate) + '%' : '-'}</div>
-    </div>
-  `;
+  </div>`;
 
   // Detail table
   const head = document.getElementById('deptIndHead');
-  head.innerHTML = '<th>序号</th><th class="text-left">指标名称</th><th>基本分</th><th>加扣分</th><th>总分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
+  head.innerHTML = '<th>序号</th><th>指标名称</th><th>满分</th><th>4月得分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
 
   const body = document.getElementById('deptIndBody');
   body.innerHTML = '';
@@ -1355,58 +1410,63 @@ function showDept(dept) {
     const name = ind.name;
     const maxD = ind.max_display;
     const ms = ind.max_score;
+    const d4raw = ind.data && ind.data['4月'] ? ind.data['4月']['坪山'] : null;
+    const d4 = d4raw !== null && d4raw !== undefined ? Math.round(d4raw * 100) / 100 : '-';
     const d5raw = ind.data && ind.data['5月'] ? ind.data['5月']['坪山'] : null;
     const d5 = d5raw !== null && d5raw !== undefined ? Math.round(d5raw * 100) / 100 : '-';
     const d6raw = ind.data && ind.data['6月'] ? ind.data['6月']['坪山'] : null;
     const d6 = d6raw !== null && d6raw !== undefined ? Math.round(d6raw * 100) / 100 : '-';
     const d7raw = ind.data && ind.data['7月'] ? ind.data['7月']['坪山'] : null;
     const d7 = d7raw !== null && d7raw !== undefined ? Math.round(d7raw * 100) / 100 : '-';
-    const rate7 = (ms > 0 && typeof d7 === 'number') ? (d7 / ms * 100) : -1;
+    const rate7 = (ms > 0 && typeof d7 === 'number') ? (d7 / ms * 100).toFixed(2) : '-';
     const rateColor = rate7 === '-' ? 'var(--text2)' : (parseFloat(rate7) >= 90 ? 'var(--green)' : parseFloat(rate7) >= 60 ? 'var(--gold)' : 'var(--red)');
     
     // 6→7月变化
     let chg67 = '';
     if (typeof d6 === 'number' && typeof d7 === 'number') {
       const diff = d7 - d6;
-      if (diff > 0.01) chg67 = '<span style="color:var(--green)">↑' + fmtNum(diff) + '</span>';
-      else if (diff < -0.01) chg67 = '<span style="color:var(--red)">↓' + fmtNum(Math.abs(diff)) + '</span>';
+      if (diff > 0.01) chg67 = '<span style="color:var(--green)">↑' + diff.toFixed(2) + '</span>';
+      else if (diff < -0.01) chg67 = '<span style="color:var(--red)">↓' + Math.abs(diff).toFixed(2) + '</span>';
       else chg67 = '<span style="color:var(--text2)">→</span>';
     }
 
-    // Trend: compare 5→7
+    // Trend: compare 4→7
     let trend = '';
-    if (typeof d5 === 'number' && typeof d7 === 'number') {
-      if (d7 > d5) trend = '<span style="color:var(--green)">↑</span>';
-      else if (d7 < d5) trend = '<span style="color:var(--red)">↓</span>';
+    if (typeof d4 === 'number' && typeof d7 === 'number') {
+      if (d7 > d4) trend = '<span style="color:var(--green)">↑</span>';
+      else if (d7 < d4) trend = '<span style="color:var(--red)">↓</span>';
       else trend = '<span style="color:var(--text2)">→</span>';
     }
 
     body.innerHTML += `<tr>
       <td>${idx + 1}</td>
-      <td class="text-left" style="font-weight:500">${name}</td>
-      <td>${(() => {
-        const bb = keyToBaseBonus[k];
-        if (bb) return fmtNum(bb.base);
-        return maxD || '';
-      })()}</td>
-      <td>${(() => {
-        const bb = keyToBaseBonus[k];
-        if (bb) return fmtNum(bb.bonus);
-        return '';
-      })()}</td>
-      <td>${(() => {
-        const bb = keyToBaseBonus[k];
-        if (bb) return fmtNum(bb.base+bb.bonus);
-        return '';
-      })()}</td>
-      <td>${typeof d5==='number'?fmtNum(d5):d5}</td>
-      <td>${typeof d6==='number'?fmtNum(d6):d6}</td>
-      <td style="font-weight:600">${typeof d7==='number'?fmtNum(d7):d7}</td>
-      <td style="color:${rateColor};font-weight:600">${rate7 >= 0 ? fmtPct(rate7) + '%' : '-'}</td>
+      <td style="font-weight:500">${name}</td>
+      <td>${maxD}</td>
+      <td>${d4}</td>
+      <td>${d5}</td>
+      <td>${d6}</td>
+      <td style="font-weight:600">${d7}</td>
+      <td style="color:${rateColor};font-weight:600">${rate7}${rate7 !== '-' ? '%' : ''}</td>
       <td>${chg67}</td>
       <td>${trend}</td>
     </tr>`;
   });
+
+  // Summary row: A + B = C
+  const basicScoreStr = basicScore.toFixed(2);
+  const extraScoreStr = (extraScore >= 0 ? '+' + extraScore.toFixed(2) : extraScore.toFixed(2));
+  const totalScoreStr = totalScore.toFixed(2);
+  body.innerHTML += `<tr style="border-top:3px double var(--border);background:var(--card2);font-weight:700;">
+    <td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;color:var(--text);">得分汇总</td>
+    <td colspan="9" style="text-align:center;font-size:15px;">
+      <span style="color:${basicRateColor}">基本分 ${basicScoreStr}</span>
+      <span style="color:var(--text2);margin:0 8px;">+</span>
+      <span style="color:${extraRateColor}">加扣分 ${extraScoreStr}</span>
+      <span style="color:var(--text2);margin:0 8px;">=</span>
+      <span style="color:${overallRateColor}">总分 ${totalScoreStr}</span>
+      <span style="color:var(--text2);margin-left:16px;font-size:12px;">（得分率 ${overallRate}${overallRate !== '-' ? '%' : ''}）</span>
+    </td>
+  </tr>`;
 }
 
 // Auto-select first department
