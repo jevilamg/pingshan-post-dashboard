@@ -1377,28 +1377,33 @@ function showDept(dept) {
 
   // Summary cards: 基本分 / 加扣分 / 总分
   const summaryDiv = document.getElementById('deptSummaryCards');
-  summaryDiv.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid ${dc};">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">基本分</div>
-      <div style="font-size:26px;font-weight:700;color:${basicRateColor}">${basicScore.toFixed(2)}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:2px;">满分 ${basicMax}</div>
-      <div style="font-size:13px;font-weight:600;color:${basicRateColor};margin-top:4px;">${basicRate}${basicRate !== '-' ? '%' : ''}</div>
+  const basicRateVal = parseFloat(basicRate);
+  const basicCls = basicRate !== '-' ? (basicRateVal >= 80 ? 'rate-high' : (basicRateVal >= 50 ? 'rate-mid' : 'rate-low')) : 'rate-low';
+  const basicBadgeCls = basicRate !== '-' ? (basicRateVal >= 80 ? 'badge-high' : (basicRateVal >= 50 ? 'badge-mid' : 'badge-low')) : 'badge-low';
+  const extraRateVal = extraScore > 0.01 ? 100 : (extraScore < -0.01 ? 0 : 50);
+  const extraCls = extraScore > 0.01 ? 'rate-high' : (extraScore < -0.01 ? 'rate-low' : 'rate-mid');
+  const extraBadgeCls = extraScore > 0.01 ? 'badge-high' : (extraScore < -0.01 ? 'badge-low' : 'badge-mid');
+  const overallRateVal = parseFloat(overallRate);
+  const overallCls = overallRate !== '-' ? (overallRateVal >= 80 ? 'rate-high' : (overallRateVal >= 50 ? 'rate-mid' : 'rate-low')) : 'rate-low';
+  const overallBadgeCls = overallRate !== '-' ? (overallRateVal >= 80 ? 'badge-high' : (overallRateVal >= 50 ? 'badge-mid' : 'badge-low')) : 'badge-low';
+  summaryDiv.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <div class="board-card ${basicCls}" style="flex:1;min-width:120px;">
+      <div class="name">基本分</div>
+      <div class="score">${basicScore}<span style="font-size:13px;color:var(--text2)">/${basicMax}</span></div>
+      <span class="badge ${basicBadgeCls}">得分率 ${Math.round(basicRateVal)}%</span>
     </div>
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid var(--yellow);">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">加扣分</div>
-      <div style="font-size:26px;font-weight:700;color:${extraRateColor}">${extraScore >= 0 ? '+' : ''}${extraScore.toFixed(2)}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:2px;">分值 ${extraMax}</div>
-      <div style="font-size:13px;font-weight:600;color:${extraRateColor};margin-top:4px;">${extraRate}${extraRate !== '-' && !isNaN(parseFloat(extraRate)) ? '%' : ''}</div>
+    <div class="board-card ${extraCls}" style="flex:1;min-width:120px;">
+      <div class="name">加扣分</div>
+      <div class="score">${extraScore >= 0 ? '+' : ''}${extraScore.toFixed(2)}<span style="font-size:13px;color:var(--text2)">/${extraMax}</span></div>
+      <span class="badge ${extraBadgeCls}">${extraScore >= 0 ? '加分项' : '扣分项'}</span>
     </div>
-    <div style="flex:1;min-width:140px;background:var(--card2);border-radius:8px;padding:14px 16px;border-top:3px solid var(--gold);">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">总分</div>
-      <div style="font-size:26px;font-weight:700;color:${overallRateColor}">${totalScore.toFixed(2)}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:2px;">满分 ${totalMax}</div>
-      <div style="font-size:13px;font-weight:600;color:${overallRateColor};margin-top:4px;">${overallRate}${overallRate !== '-' ? '%' : ''}</div>
+    <div class="board-card ${overallCls}" style="flex:1;min-width:120px;">
+      <div class="name">总分</div>
+      <div class="score">${totalScore.toFixed(2)}<span style="font-size:13px;color:var(--text2)">/${totalMax}</span></div>
+      <span class="badge ${overallBadgeCls}">得分率 ${Math.round(overallRateVal)}%</span>
     </div>
   </div>`;
-
-  // Detail table
+// Detail table
   const head = document.getElementById('deptIndHead');
   head.innerHTML = '<th>序号</th><th>指标名称</th><th>满分</th><th>4月得分</th><th>5月得分</th><th>6月得分</th><th>7月得分</th><th>7月得分率</th><th>6→7月变化</th><th>趋势</th>';
 
